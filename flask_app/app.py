@@ -19,6 +19,32 @@ UPLOAD_FOLDER = BASE_DIR / 'flask_app' / 'uploads'
 UPLOAD_FOLDER.mkdir(exist_ok=True)
 
 
+def clean_text(value, default=''):
+
+    if pd.isna(value):
+        return default
+
+    text = str(value)
+
+    if text.strip().lower() in ['nan', 'none', 'nat']:
+        return default
+
+    return text
+
+
+def clean_float(value, default=0.0):
+
+    try:
+        number = float(value)
+    except (TypeError, ValueError):
+        return default
+
+    if pd.isna(number):
+        return default
+
+    return number
+
+
 # =========================================================
 # HOME
 # =========================================================
@@ -72,7 +98,10 @@ def upload_csv():
             'prediction_results.csv'
         )
 
-        df = pd.read_csv(result_csv_path)
+        df = pd.read_csv(
+            result_csv_path,
+            keep_default_na=False
+        )
 
         # =================================================
         # EVALUATION
@@ -81,13 +110,19 @@ def upload_csv():
 
             y_true = df['label']
 
-            y_pred = df['risk_level'].apply(
+            if 'predicted_label' in df.columns:
 
-                lambda x:
-                    'deviant'
-                    if str(x).lower() == 'high'
-                    else 'regular'
-            )
+                y_pred = df['predicted_label']
+
+            else:
+
+                y_pred = df['risk_level'].apply(
+
+                    lambda x:
+                        'deviant'
+                        if str(x).lower() == 'high'
+                        else 'regular'
+                )
 
             evaluate_model(
                 y_true,
@@ -106,30 +141,55 @@ def upload_csv():
 
         for idx, row in df.iterrows():
 
-            risk_level = str(
-                row['risk_level']
+            risk_level = clean_text(
+                row.get(
+                    'risk_level',
+                    ''
+                ),
+                ''
             )
 
             is_anomaly = (
-                risk_level.lower() == 'high'
+                str(
+                    row.get(
+                        'predicted_label',
+                        ''
+                    )
+                ).lower()
+                == 'deviant'
+                or risk_level.lower() == 'high'
             )
 
-            anomaly_score = float(
-                row['anomaly_score']
+            anomaly_score = clean_float(
+                row.get(
+                    'anomaly_score',
+                    0
+                )
             )
 
-            predicted_label = (
-
-                'deviant'
-                if is_anomaly
-                else 'regular'
+            predicted_label = clean_text(
+                row.get(
+                    'predicted_label',
+                    (
+                        'deviant'
+                        if is_anomaly
+                        else 'regular'
+                    )
+                ),
+                (
+                    'deviant'
+                    if is_anomaly
+                    else 'regular'
+                )
             )
 
-            risk_level = (
-
-                'High'
-                if is_anomaly
-                else 'Low'
+            risk_level = clean_text(
+                risk_level,
+                (
+                    'High'
+                    if is_anomaly
+                    else 'Low'
+                )
             )
 
             normalized_score = round(
@@ -147,12 +207,21 @@ def upload_csv():
             results.append({
 
                 'case_id':
-                    row['case_id'],
+                    clean_text(
+                        row.get(
+                            'case_id',
+                            ''
+                        )
+                    ),
 
                 'true_label':
-                    row['label']
-                    if 'label' in row
-                    else 'unknown',
+                    clean_text(
+                        row.get(
+                            'label',
+                            'unknown'
+                        ),
+                        'unknown'
+                    ),
 
                 'predicted_label':
                     predicted_label,
@@ -169,50 +238,108 @@ def upload_csv():
                     else 'success',
 
                 'anomaly_types':
-                    'Control-Flow'
-                    if is_anomaly
-                    else '—',
+                    clean_text(
+                        row.get(
+                            'anomaly_types',
+                            'No anomaly'
+                        ),
+                        'No anomaly'
+                    ),
 
                 'ddc_score':
                     round(
-                        normalized_score,
+                        clean_float(
+                            row.get(
+                                'ddc_score',
+                                normalized_score
+                            )
+                        ),
                         3
                     ),
 
                 'z_score':
                     round(
-                        normalized_score * 0.85,
+                        clean_float(
+                            row.get(
+                                'z_score',
+                                normalized_score
+                            )
+                        ),
                         3
                     ),
 
                 'arm_score':
                     round(
-                        normalized_score * 0.7,
+                        clean_float(
+                            row.get(
+                                'arm_score',
+                                normalized_score
+                            )
+                        ),
                         3
                     ),
 
                 'br_score':
                     round(
-                        normalized_score * 0.55,
+                        clean_float(
+                            row.get(
+                                'br_score',
+                                normalized_score
+                            )
+                        ),
                         3
                     ),
 
                 'explanation':
-                    (
-                        'Unusual process flow detected'
-                        if is_anomaly
-                        else 'Normal process flow'
+                    clean_text(
+                        row.get(
+                            'explanation',
+                            (
+                                'Unusual process flow detected'
+                                if is_anomaly
+                                else 'Normal process flow'
+                            )
+                        ),
+                        (
+                            'Unusual process flow detected'
+                            if is_anomaly
+                            else 'Normal process flow'
+                        )
                     )
             })
 
         # =================================================
         # SUMMARY
         # =================================================
-        total = result['total_rows']
+        total = len(df)
 
-        anomaly_count = result['anomaly_count']
+        predicted_counts = (
+            df['predicted_label']
+            .astype(str)
+            .str.lower()
+            .value_counts()
+        )
 
-        normal_count = result['normal_count']
+        anomaly_count = int(
+            predicted_counts.get(
+                'deviant',
+                0
+            )
+        )
+
+        normal_count = int(
+            predicted_counts.get(
+                'regular',
+                0
+            )
+        )
+
+        risk_counts = (
+            df['risk_level']
+            .astype(str)
+            .str.lower()
+            .value_counts()
+        )
 
         anomaly_pct = round(
 
@@ -244,13 +371,48 @@ def upload_csv():
                     anomaly_pct,
 
                 'high_risk':
-                    anomaly_count,
+                    int(
+                        risk_counts.get(
+                            'high',
+                            0
+                        )
+                    ),
 
                 'medium_risk':
-                    0,
+                    int(
+                        risk_counts.get(
+                            'medium',
+                            0
+                        )
+                    ),
+
+                'low_risk':
+                    int(
+                        risk_counts.get(
+                            'low',
+                            0
+                        )
+                    ),
 
                 'threshold':
-                    result['threshold']
+                    clean_float(
+                        df['threshold'].iloc[0]
+                        if 'threshold' in df.columns
+                        and len(df) > 0
+                        else result['threshold']
+                    ),
+
+                'threshold_method':
+                    clean_text(
+                        df['threshold_method'].iloc[0]
+                        if 'threshold_method' in df.columns
+                        and len(df) > 0
+                        else result.get(
+                            'threshold_method',
+                            'unknown'
+                        ),
+                        'unknown'
+                    )
             },
 
             'results':
