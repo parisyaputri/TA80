@@ -1,7 +1,13 @@
 from flask import Flask, render_template, request, jsonify
 from pathlib import Path
 import pandas as pd
+import sys
 
+sys.path.append(
+    str(Path(__file__).resolve().parent.parent)
+)
+
+from utils.evaluation import evaluate_model
 from train_pipeline import train_and_detect
 
 app = Flask(__name__)
@@ -13,22 +19,20 @@ UPLOAD_FOLDER = BASE_DIR / 'flask_app' / 'uploads'
 UPLOAD_FOLDER.mkdir(exist_ok=True)
 
 
+# =========================================================
+# HOME
+# =========================================================
 @app.route('/')
 def home():
 
     return render_template(
-        'index.html',
-        activities=[],
-        cases=[],
-        results=[],
-        nodes=[],
-        links=[],
-        vehicle_classes=[],
-        dismissals=[],
-        now=''
+        'index.html'
     )
 
 
+# =========================================================
+# CSV UPLOAD + DETECTION
+# =========================================================
 @app.route('/classify-csv', methods=['POST'])
 def upload_csv():
 
@@ -70,6 +74,34 @@ def upload_csv():
 
         df = pd.read_csv(result_csv_path)
 
+        # =================================================
+        # EVALUATION
+        # =================================================
+        if 'label' in df.columns:
+
+            y_true = df['label']
+
+            y_pred = df['risk_level'].apply(
+
+                lambda x:
+                    'deviant'
+                    if str(x).lower() == 'high'
+                    else 'regular'
+            )
+
+            evaluate_model(
+                y_true,
+                y_pred
+            )
+
+        else:
+
+            print("\n===== EVALUATION SKIPPED =====")
+            print("Column 'label' not found")
+
+        # =================================================
+        # FORMAT RESULTS
+        # =================================================
         results = []
 
         for idx, row in df.iterrows():
@@ -87,19 +119,21 @@ def upload_csv():
             )
 
             predicted_label = (
+
                 'deviant'
                 if is_anomaly
                 else 'regular'
             )
 
             risk_level = (
+
                 'High'
                 if is_anomaly
                 else 'Low'
             )
 
-            # ===== NORMALIZE SCORE =====
             normalized_score = round(
+
                 min(
                     max(
                         anomaly_score,
@@ -116,7 +150,9 @@ def upload_csv():
                     row['case_id'],
 
                 'true_label':
-                    'unknown',
+                    row['label']
+                    if 'label' in row
+                    else 'unknown',
 
                 'predicted_label':
                     predicted_label,
@@ -137,7 +173,6 @@ def upload_csv():
                     if is_anomaly
                     else '—',
 
-                # ===== SCORES =====
                 'ddc_score':
                     round(
                         normalized_score,
@@ -170,7 +205,9 @@ def upload_csv():
                     )
             })
 
-        # ===== SUMMARY =====
+        # =================================================
+        # SUMMARY
+        # =================================================
         total = result['total_rows']
 
         anomaly_count = result['anomaly_count']
@@ -178,13 +215,18 @@ def upload_csv():
         normal_count = result['normal_count']
 
         anomaly_pct = round(
+
             (
                 anomaly_count / total
             ) * 100,
+
             2
+
         ) if total > 0 else 0
 
-        # ===== RESPONSE =====
+        # =================================================
+        # RESPONSE
+        # =================================================
         return jsonify({
 
             'summary': {
@@ -224,6 +266,9 @@ def upload_csv():
         })
 
 
+# =========================================================
+# RUN APP
+# =========================================================
 if __name__ == '__main__':
 
     app.run(

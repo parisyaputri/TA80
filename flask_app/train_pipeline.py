@@ -70,6 +70,18 @@ def train_and_detect(csv_path):
     if activity_col is None:
         activity_col = df.columns[1]
 
+    # ===== LABEL COLUMN DETECTION =====
+    label_col = None
+
+    for col in df.columns:
+
+        col_lower = col.lower()
+
+        if 'label' in col_lower:
+
+            label_col = col
+            break
+
     # ===== GROUP BY CASE =====
     grouped = df.groupby(case_col)
 
@@ -124,11 +136,29 @@ def train_and_detect(csv_path):
             except:
                 pass
 
+        # ===== TRUE LABEL =====
+        true_label = 'unknown'
+
+        if label_col is not None:
+
+            labels = group[label_col].astype(str).str.lower()
+
+            if any(labels == 'deviant'):
+
+                true_label = 'deviant'
+
+            else:
+
+                true_label = 'regular'
+
         # ===== BASIC FEATURES =====
         row = {
 
             'case_id':
                 str(case_id),
+
+            'label':
+                true_label,
 
             # ===== CONTROL FLOW =====
             'cf_n_events':
@@ -192,7 +222,7 @@ def train_and_detect(csv_path):
             'expense':
                 0
         }
-
+        
         # ===== AUTO NUMERIC DETECT =====
         for col in group.columns:
 
@@ -324,7 +354,7 @@ def train_and_detect(csv_path):
     normal_count = len(final_df) - anomaly_count
 
     threshold = round(
-        final_df['anomaly_score'].quantile(0.95),
+        final_df['anomaly_score'].quantile(0.70),
         3
     )
 

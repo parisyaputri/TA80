@@ -1,295 +1,224 @@
 <!DOCTYPE html>
-<html lang="id">
+<html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Traffic Fines — Anomaly Detection</title>
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" />
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet" />
+
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet"/>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet"/>
+
   <style>
-    body { background: #f0f2f5; font-family: 'Segoe UI', sans-serif; }
-    .navbar-brand { font-weight: 700; letter-spacing: 0.5px; }
-    .card { border: none; border-radius: 16px; box-shadow: 0 2px 12px rgba(0,0,0,.08); }
-    .card-header { border-radius: 16px 16px 0 0 !important; }
-    .event-row { background: #f8f9fa; border-radius: 10px; padding: 12px 14px; margin-bottom: 8px; border: 1px solid #dee2e6; transition: border-color .2s; }
-    .event-row:hover { border-color: #0d6efd55; }
-    .event-row .row { align-items: center; }
-    .btn-remove { color: #dc3545; background: none; border: none; padding: 2px 6px; font-size: 1.1rem; }
-    .btn-remove:hover { color: #a71d2a; }
-    .result-card { display: none; }
-    .score-bar-wrap { height: 28px; background: #e9ecef; border-radius: 8px; overflow: hidden; }
-    .score-bar { height: 100%; border-radius: 8px; transition: width .5s ease; display: flex; align-items: center; justify-content: center; font-size: .8rem; font-weight: 700; color: #fff; }
-    .feature-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 10px; }
-    .feature-item { background: #f8f9fa; border-radius: 10px; padding: 10px 14px; border: 1px solid #e9ecef; }
-    .feature-item .feat-label { font-size: .75rem; color: #6c757d; text-transform: uppercase; letter-spacing: .5px; }
-    .feature-item .feat-value { font-size: 1rem; font-weight: 600; color: #212529; }
-    .component-row { display: flex; align-items: center; gap: 10px; margin-bottom: 6px; }
-    .component-label { min-width: 80px; font-size: .8rem; color: #6c757d; text-align: right; }
-    .component-bar-wrap { flex: 1; height: 16px; background: #e9ecef; border-radius: 6px; overflow: hidden; }
-    .component-bar { height: 100%; border-radius: 6px; transition: width .5s ease; }
-    .explanation-box { background: #fff3cd; border-left: 4px solid #ffc107; border-radius: 6px; padding: 12px 16px; font-size: .88rem; color: #664d03; }
-    #loadingOverlay { display:none; position:fixed; inset:0; background:rgba(255,255,255,.7); z-index:9999; align-items:center; justify-content:center; }
-    #loadingOverlay.show { display:flex; }
-    .risk-badge { font-size: 1rem; padding: 6px 18px; border-radius: 20px; }
-    .predicted-label { font-size: 1.5rem; font-weight: 700; }
-    /* CSV drop zone */
-    .drop-zone { border: 2px dashed #0d6efd; border-radius: 14px; padding: 36px; text-align: center; background: #f0f6ff; cursor: pointer; transition: background .2s, border-color .2s; }
-    .drop-zone:hover, .drop-zone.drag-over { background: #dceeff; border-color: #0a58ca; }
-    .drop-zone i { font-size: 2.8rem; color: #0d6efd; }
-    /* CSV results table */
-    .csv-table-wrap { max-height: 420px; overflow-y: auto; border-radius: 10px; border: 1px solid #dee2e6; }
-    .csv-table { margin-bottom: 0; font-size: .84rem; }
-    .csv-table th { position: sticky; top: 0; background: #343a40; color: #fff; font-weight: 600; white-space: nowrap; z-index: 1; }
-    .csv-summary-card { border-radius: 12px; }
-    .stat-box { background: #f8f9fa; border-radius: 10px; padding: 14px; text-align: center; }
-    .stat-box .stat-val { font-size: 1.6rem; font-weight: 700; }
-    .stat-box .stat-lbl { font-size: .75rem; color: #6c757d; text-transform: uppercase; letter-spacing: .5px; }
+    body {
+      background: #f0f2f5;
+      font-family: 'Segoe UI', sans-serif;
+    }
+
+    .navbar-brand {
+      font-weight: 700;
+      letter-spacing: .5px;
+    }
+
+    .card {
+      border: none;
+      border-radius: 16px;
+      box-shadow: 0 2px 12px rgba(0,0,0,.08);
+    }
+
+    .card-header {
+      border-radius: 16px 16px 0 0 !important;
+    }
+
+    .drop-zone {
+      border: 2px dashed #0d6efd;
+      border-radius: 14px;
+      padding: 48px;
+      text-align: center;
+      background: #f0f6ff;
+      cursor: pointer;
+      transition: .2s;
+    }
+
+    .drop-zone:hover,
+    .drop-zone.drag-over {
+      background: #dceeff;
+      border-color: #0a58ca;
+    }
+
+    .drop-zone i {
+      font-size: 3rem;
+      color: #0d6efd;
+    }
+
+    .csv-table-wrap {
+      max-height: 500px;
+      overflow-y: auto;
+      border-radius: 10px;
+      border: 1px solid #dee2e6;
+    }
+
+    .csv-table {
+      margin-bottom: 0;
+      font-size: .84rem;
+    }
+
+    .csv-table th {
+      position: sticky;
+      top: 0;
+      background: #343a40;
+      color: white;
+      z-index: 1;
+    }
+
+    .stat-box {
+      background: #f8f9fa;
+      border-radius: 12px;
+      padding: 16px;
+      text-align: center;
+    }
+
+    .stat-val {
+      font-size: 1.6rem;
+      font-weight: 700;
+    }
+
+    .stat-lbl {
+      font-size: .75rem;
+      color: #6c757d;
+      text-transform: uppercase;
+    }
+
+    #loadingOverlay {
+      display:none;
+      position:fixed;
+      inset:0;
+      background:rgba(255,255,255,.7);
+      z-index:9999;
+      align-items:center;
+      justify-content:center;
+    }
+
+    #loadingOverlay.show {
+      display:flex;
+    }
   </style>
 </head>
+
 <body>
 
-<!-- Navbar -->
 <nav class="navbar navbar-expand-lg navbar-dark bg-primary shadow-sm">
   <div class="container">
     <span class="navbar-brand">
-      <i class="bi bi-shield-check me-2"></i>Traffic Fines — Anomaly Detection
-    </span>
-    <span class="navbar-text text-white-50 small">
-      Powered by Digital Twin + DDC + MV-ARM
+      <i class="bi bi-shield-check me-2"></i>
+      Traffic Fines — Anomaly Detection
     </span>
   </div>
 </nav>
 
-<!-- Loading overlay -->
 <div id="loadingOverlay">
   <div class="text-center">
     <div class="spinner-border text-primary mb-3" style="width:3rem;height:3rem;"></div>
-    <div class="fw-semibold text-primary">Menganalisis kasus...</div>
+    <div class="fw-semibold text-primary">
+      Processing CSV...
+    </div>
   </div>
 </div>
 
 <div class="container py-4">
-  <div class="row g-4">
 
-    <!-- ── INPUT FORM ── -->
-    <div class="col-lg-6">
-      <div class="card h-100">
-        <div class="card-header bg-primary text-white py-3">
-          <h5 class="mb-0"><i class="bi bi-pencil-square me-2"></i>Input Data Kasus</h5>
-        </div>
-        <div class="card-body p-4">
+  <!-- CSV Upload -->
+  <div class="card mb-4">
 
-          <!-- Tab switcher -->
-          <ul class="nav nav-pills mb-4" id="inputTabs">
-            <li class="nav-item me-1">
-              <button class="nav-link active px-4" id="tab-manual" onclick="switchTab('manual')">
-                <i class="bi bi-keyboard me-1"></i>Input Manual
-              </button>
-            </li>
-            <li class="nav-item">
-              <button class="nav-link px-4" id="tab-csv" onclick="switchTab('csv')">
-                <i class="bi bi-filetype-csv me-1"></i>Upload CSV
-              </button>
-            </li>
-          </ul>
-
-          <!-- ── PANEL MANUAL ── -->
-          <div id="panelManual">
-            <h6 class="fw-semibold text-secondary mb-3"><i class="bi bi-info-circle me-1"></i>Informasi Kasus</h6>
-            <div class="row g-3 mb-4">
-              <div class="col-sm-6">
-                <label class="form-label small fw-semibold">Case ID</label>
-                <input id="caseId" type="text" class="form-control" value="NEW_001" placeholder="e.g. CASE_001" />
-              </div>
-              <div class="col-sm-6">
-                <label class="form-label small fw-semibold">Vehicle Class</label>
-                <select id="vehicleClass" class="form-select">
-                  {% for vc in vehicle_classes %}
-                  <option value="{{ vc }}">{{ vc }}</option>
-                  {% endfor %}
-                </select>
-              </div>
-              <div class="col-sm-4">
-                <label class="form-label small fw-semibold">Fine Amount (€)</label>
-                <input id="amount" type="number" class="form-control" value="71.5" min="0" step="0.5" />
-              </div>
-              <div class="col-sm-4">
-                <label class="form-label small fw-semibold">Points</label>
-                <input id="points" type="number" class="form-control" value="0" min="0" />
-              </div>
-              <div class="col-sm-4">
-                <label class="form-label small fw-semibold">Expense (€)</label>
-                <input id="expense" type="number" class="form-control" value="11" min="0" step="0.5" />
-              </div>
-              <div class="col-sm-6">
-                <label class="form-label small fw-semibold">Article</label>
-                <input id="article" type="text" class="form-control" value="A001" placeholder="e.g. A001" />
-              </div>
-              <div class="col-sm-6">
-                <label class="form-label small fw-semibold">Dismissal</label>
-                <select id="dismissal" class="form-select">
-                  {% for d in dismissals %}
-                  <option value="{{ d }}">{{ d }}</option>
-                  {% endfor %}
-                </select>
-              </div>
-            </div>
-
-            <hr class="my-3" />
-
-            <div class="d-flex justify-content-between align-items-center mb-3">
-              <h6 class="fw-semibold text-secondary mb-0"><i class="bi bi-list-ol me-1"></i>Event Log</h6>
-              <button class="btn btn-sm btn-outline-primary" onclick="addEvent()">
-                <i class="bi bi-plus-lg me-1"></i>Tambah Event
-              </button>
-            </div>
-
-            <div id="eventsContainer"></div>
-
-            <div class="alert alert-info py-2 px-3 mt-2 small">
-              <i class="bi bi-lightbulb me-1"></i>
-              Urutan event <strong>tidak harus berurutan</strong> — sistem otomatis mengurutkan berdasarkan timestamp.
-            </div>
-
-            <div class="d-grid mt-4">
-              <button class="btn btn-primary btn-lg fw-semibold" onclick="submitCase()">
-                <i class="bi bi-cpu me-2"></i>Analisis Kasus
-              </button>
-            </div>
-          </div><!-- /panelManual -->
-
-          <!-- ── PANEL CSV ── -->
-          <div id="panelCsv" style="display:none;">
-            <div class="drop-zone mb-3" id="dropZone" onclick="document.getElementById('csvFileInput').click()">
-              <i class="bi bi-cloud-arrow-up-fill d-block mb-2"></i>
-              <div class="fw-semibold">Klik atau drag &amp; drop file CSV di sini</div>
-              <div class="text-muted small mt-1">Format: traffic_fines_1.csv (separator <code>;</code> atau <code>,</code>)</div>
-              <div id="csvFileName" class="mt-2 small fw-semibold text-primary"></div>
-            </div>
-            <input type="file" id="csvFileInput" accept=".csv" class="d-none" onchange="onCsvFileChosen(this)" />
-
-            <div class="alert alert-secondary py-2 px-3 small mb-3">
-              <i class="bi bi-info-circle me-1"></i>
-              Kolom wajib: <code>Case ID</code>, <code>Activity</code>, <code>Complete Timestamp</code>.
-              Kolom opsional: <code>Resource</code>, <code>amount</code>, <code>points</code>, <code>expense</code>, <code>vehicleClass</code>, <code>dismissal</code>, <code>label</code>.
-            </div>
-
-            <div class="d-grid">
-              <button class="btn btn-primary btn-lg fw-semibold" onclick="submitCsv()" id="btnUploadCsv" disabled>
-                <i class="bi bi-cpu me-2"></i>Analisis CSV
-              </button>
-            </div>
-          </div><!-- /panelCsv -->
-
-        </div>
-      </div>
+    <div class="card-header bg-primary text-white py-3">
+      <h5 class="mb-0">
+        <i class="bi bi-file-earmark-arrow-up me-2"></i>
+        Upload Event Log CSV
+      </h5>
     </div>
 
-    <!-- ── RESULT PANEL ── -->
-    <div class="col-lg-6">
-      <div id="resultPanel" class="card result-card h-100">
-        <div class="card-header py-3" id="resultHeader">
-          <h5 class="mb-0"><i class="bi bi-graph-up-arrow me-2"></i>Hasil Analisis</h5>
+    <div class="card-body p-4">
+
+      <div class="drop-zone mb-3"
+           id="dropZone"
+           onclick="document.getElementById('csvFileInput').click()">
+
+        <i class="bi bi-cloud-arrow-up-fill d-block mb-3"></i>
+
+        <div class="fw-semibold">
+          Click or drag & drop CSV file here
         </div>
-        <div class="card-body p-4">
 
-          <!-- Verdict -->
-          <div class="text-center mb-4">
-            <div id="caseIdResult" class="text-muted small mb-1"></div>
-            <div id="predictedLabel" class="predicted-label mb-2"></div>
-            <span id="riskBadge" class="badge risk-badge"></span>
-          </div>
-
-          <!-- Anomaly Score -->
-          <div class="mb-4">
-            <div class="d-flex justify-content-between mb-1">
-              <span class="small fw-semibold text-secondary">Anomaly Score</span>
-              <span id="scoreValue" class="small fw-bold"></span>
-            </div>
-            <div class="score-bar-wrap">
-              <div id="scoreBar" class="score-bar bg-danger"></div>
-            </div>
-            <div class="d-flex justify-content-between mt-1">
-              <span class="text-muted" style="font-size:.7rem;">0.0</span>
-              <span class="text-muted" style="font-size:.7rem;">Threshold: <span id="thresholdLabel"></span></span>
-              <span class="text-muted" style="font-size:.7rem;">1.0</span>
-            </div>
-          </div>
-
-          <!-- Score components -->
-          <div class="mb-4">
-            <div class="small fw-semibold text-secondary mb-2">Breakdown Komponen</div>
-            <div class="component-row">
-              <span class="component-label">DDC</span>
-              <div class="component-bar-wrap"><div id="barDDC" class="component-bar bg-danger"></div></div>
-              <span id="valDDC" class="small fw-semibold" style="min-width:40px;text-align:right;"></span>
-            </div>
-            <div class="component-row">
-              <span class="component-label">Z-Score</span>
-              <div class="component-bar-wrap"><div id="barZ" class="component-bar bg-warning"></div></div>
-              <span id="valZ" class="small fw-semibold" style="min-width:40px;text-align:right;"></span>
-            </div>
-            <div class="component-row">
-              <span class="component-label">MV-ARM</span>
-              <div class="component-bar-wrap"><div id="barARM" class="component-bar bg-info"></div></div>
-              <span id="valARM" class="small fw-semibold" style="min-width:40px;text-align:right;"></span>
-            </div>
-            <div class="component-row">
-              <span class="component-label">Biz Rules</span>
-              <div class="component-bar-wrap"><div id="barBR" class="component-bar bg-secondary"></div></div>
-              <span id="valBR" class="small fw-semibold" style="min-width:40px;text-align:right;"></span>
-            </div>
-          </div>
-
-          <!-- Anomaly type & Explanation -->
-          <div class="mb-4">
-            <div class="small fw-semibold text-secondary mb-2">Tipe Anomali</div>
-            <div id="anomalyTypes"></div>
-          </div>
-
-          <div class="mb-4">
-            <div class="small fw-semibold text-secondary mb-2">Penjelasan</div>
-            <div id="explanation" class="explanation-box"></div>
-          </div>
-
-          <!-- Extracted Features -->
-          <details>
-            <summary class="small fw-semibold text-secondary mb-2" style="cursor:pointer;">
-              <i class="bi bi-table me-1"></i>Fitur yang Diekstrak
-            </summary>
-            <div id="featureGrid" class="feature-grid mt-2"></div>
-          </details>
-
+        <div class="text-muted small mt-2">
+          Supported separators: ";" or ","
         </div>
+
+        <div id="csvFileName"
+             class="mt-3 small fw-semibold text-primary"></div>
       </div>
 
-      <!-- Placeholder -->
-      <div id="placeholderPanel" class="card h-100">
-        <div class="card-body d-flex flex-column align-items-center justify-content-center text-center py-5">
-          <i class="bi bi-search" style="font-size:4rem;color:#dee2e6;"></i>
-          <div class="fw-semibold text-muted mt-3">Hasil analisis akan muncul di sini</div>
-          <div class="text-muted small mt-1">Isi data kasus di sebelah kiri lalu klik <strong>Analisis Kasus</strong></div>
-        </div>
+      <input
+        type="file"
+        id="csvFileInput"
+        accept=".csv"
+        class="d-none"
+        onchange="onCsvFileChosen(this)"
+      />
+
+      <div class="alert alert-secondary py-2 px-3 small mb-3">
+        <i class="bi bi-info-circle me-1"></i>
+        Required columns:
+        <code>Case ID</code>,
+        <code>Activity</code>,
+        <code>Complete Timestamp</code>
       </div>
-    </div>
 
-  </div><!-- /row -->
+      <div class="d-grid">
+        <button
+          class="btn btn-primary btn-lg fw-semibold"
+          onclick="submitCsv()"
+          id="btnUploadCsv"
+          disabled>
 
-  <!-- ── CSV RESULTS (full width, hidden initially) ── -->
-  <div id="csvResultSection" style="display:none;" class="mt-4">
-    <div class="card">
-      <div class="card-header bg-dark text-white py-3 d-flex justify-content-between align-items-center">
-        <h5 class="mb-0"><i class="bi bi-table me-2"></i>Hasil Analisis CSV — Batch</h5>
-        <button class="btn btn-sm btn-outline-light" onclick="downloadCsvResult()">
-          <i class="bi bi-download me-1"></i>Download Hasil
+          <i class="bi bi-cpu me-2"></i>
+          Analyze CSV
         </button>
       </div>
+
+    </div>
+  </div>
+
+  <!-- CSV Result -->
+  <div id="csvResultSection" style="display:none;">
+
+    <div class="card">
+
+      <div class="card-header bg-dark text-white py-3 d-flex justify-content-between align-items-center">
+
+        <h5 class="mb-0">
+          <i class="bi bi-table me-2"></i>
+          Batch Detection Result
+        </h5>
+
+        <button
+          class="btn btn-sm btn-outline-light"
+          onclick="downloadCsvResult()">
+
+          <i class="bi bi-download me-1"></i>
+          Download Result
+        </button>
+
+      </div>
+
       <div class="card-body p-4">
-        <!-- Summary stats -->
+
+        <!-- Summary -->
         <div id="csvSummary" class="row g-3 mb-4"></div>
+
         <!-- Table -->
         <div class="csv-table-wrap">
-          <table class="table table-hover csv-table" id="csvResultTable">
+
+          <table class="table table-hover csv-table">
+
             <thead>
               <tr>
                 <th>#</th>
@@ -298,362 +227,339 @@
                 <th>Predicted</th>
                 <th>Score</th>
                 <th>Risk</th>
-                <th>Tipe Anomali</th>
                 <th>DDC</th>
                 <th>Z</th>
                 <th>ARM</th>
                 <th>BR</th>
-                <th>Penjelasan</th>
+                <th>Explanation</th>
               </tr>
             </thead>
+
             <tbody id="csvResultBody"></tbody>
+
           </table>
+
         </div>
       </div>
     </div>
   </div>
+</div>
 
-  <!-- ── ERROR TOAST ── -->
-  <div class="toast-container position-fixed bottom-0 end-0 p-3">
-    <div id="errorToast" class="toast text-bg-danger border-0" role="alert">
-      <div class="d-flex">
-        <div class="toast-body" id="errorMsg"></div>
-        <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
-      </div>
+<!-- Error Toast -->
+<div class="toast-container position-fixed bottom-0 end-0 p-3">
+
+  <div id="errorToast"
+       class="toast text-bg-danger border-0">
+
+    <div class="d-flex">
+
+      <div class="toast-body"
+           id="errorMsg"></div>
+
+      <button
+        type="button"
+        class="btn-close btn-close-white me-2 m-auto"
+        data-bs-dismiss="toast"></button>
+
     </div>
   </div>
-
-</div><!-- /container -->
+</div>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+
 <script>
-  const ACTIVITIES = {{ activities | tojson }};
-  let eventCount   = 0;
 
-  // ── Add event row ──────────────────────────────────────────────────────────
-  function addEvent(prefill = {}) {
-    eventCount++;
-    const id      = `evt_${eventCount}`;
-    const actOpts = ACTIVITIES.map(a =>
-      `<option value="${a}" ${prefill.activity === a ? 'selected' : ''}>${a}</option>`
-    ).join('');
-
-    const html = `
-      <div class="event-row" id="${id}">
-        <div class="row g-2">
-          <div class="col-12 col-sm-5">
-            <label class="form-label small mb-1 text-muted">Activity</label>
-            <select class="form-select form-select-sm evt-activity">${actOpts}</select>
-          </div>
-          <div class="col-8 col-sm-5">
-            <label class="form-label small mb-1 text-muted">Resource</label>
-            <input type="text" class="form-control form-control-sm evt-resource"
-                   value="${prefill.resource || 'Police-1'}" placeholder="Police-1 / Bank-1 / 0" />
-          </div>
-          <div class="col-4 col-sm-2 d-flex align-items-end">
-            <button class="btn-remove w-100" onclick="removeEvent('${id}')" title="Hapus event">
-              <i class="bi bi-trash3"></i>
-            </button>
-          </div>
-          <div class="col-12">
-            <label class="form-label small mb-1 text-muted">Timestamp</label>
-            <input type="datetime-local" class="form-control form-control-sm evt-timestamp"
-                   value="${prefill.timestamp || '{{ now }}'}" />
-          </div>
-        </div>
-      </div>`;
-    document.getElementById('eventsContainer').insertAdjacentHTML('beforeend', html);
-  }
-
-  function removeEvent(id) {
-    const el = document.getElementById(id);
-    if (el) el.remove();
-  }
-
-  // ── Collect form data ──────────────────────────────────────────────────────
-  function collectData() {
-    const meta = {
-      case_id     : document.getElementById('caseId').value.trim()  || 'NEW_001',
-      vehicleClass: document.getElementById('vehicleClass').value,
-      amount      : parseFloat(document.getElementById('amount').value)  || 0,
-      points      : parseFloat(document.getElementById('points').value)  || 0,
-      expense     : parseFloat(document.getElementById('expense').value) || 0,
-      article     : document.getElementById('article').value.trim(),
-      dismissal   : document.getElementById('dismissal').value,
-    };
-
-    const events = [];
-    document.querySelectorAll('.event-row').forEach(row => {
-      events.push({
-        activity : row.querySelector('.evt-activity').value,
-        resource : row.querySelector('.evt-resource').value.trim(),
-        timestamp: row.querySelector('.evt-timestamp').value,
-      });
-    });
-
-    return { meta, events };
-  }
-
-  // ── Submit ─────────────────────────────────────────────────────────────────
-  async function submitCase() {
-    const payload = collectData();
-    if (payload.events.length === 0) {
-      showError('Tambahkan minimal 1 event sebelum menganalisis.');
-      return;
-    }
-
-    document.getElementById('loadingOverlay').classList.add('show');
-
-    try {
-      const resp = await fetch('/classify', {
-        method : 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body   : JSON.stringify(payload),
-      });
-      const data = await resp.json();
-
-      if (data.error) { showError(data.error); return; }
-      renderResult(data, payload.meta.case_id);
-    } catch (e) {
-      showError('Terjadi kesalahan jaringan: ' + e.message);
-    } finally {
-      document.getElementById('loadingOverlay').classList.remove('show');
-    }
-  }
-
-  // ── Render result ──────────────────────────────────────────────────────────
-  function renderResult(data, caseId) {
-    const r   = data.result;
-    const fs  = data.feature_summary;
-    const thr = r.threshold;
-
-    // Header colour
-    const colourMap = { danger: '#dc3545', warning: '#fd7e14', success: '#198754' };
-    const hColor    = colourMap[r.badge_colour] || '#6c757d';
-
-    document.getElementById('resultHeader').style.background = hColor;
-    document.getElementById('resultHeader').style.color      = '#fff';
-
-    document.getElementById('caseIdResult').textContent = `Case ID: ${caseId}`;
-
-    const labelEl = document.getElementById('predictedLabel');
-    if (r.predicted_label === 'deviant') {
-      labelEl.textContent   = '⚠️ DEVIANT';
-      labelEl.style.color   = '#dc3545';
-    } else {
-      labelEl.textContent   = '✅ REGULAR';
-      labelEl.style.color   = '#198754';
-    }
-
-    document.getElementById('riskBadge').textContent       = `Risk: ${r.risk_level}`;
-    document.getElementById('riskBadge').className         = `badge risk-badge bg-${r.badge_colour}`;
-    document.getElementById('scoreValue').textContent      = `${r.anomaly_score.toFixed(4)} / 1.0`;
-    document.getElementById('thresholdLabel').textContent  = thr.toFixed(4);
-
-    // Score bar
-    const pct = Math.round(r.anomaly_score * 100);
-    const barColor = r.badge_colour === 'success' ? '#198754' : r.badge_colour === 'warning' ? '#fd7e14' : '#dc3545';
-    const scoreBar = document.getElementById('scoreBar');
-    scoreBar.style.width      = `${pct}%`;
-    scoreBar.style.background = barColor;
-    scoreBar.textContent      = `${pct}%`;
-
-    // Components
-    setBar('DDC', r.ddc_score);
-    setBar('Z',   r.z_score);
-    setBar('ARM', r.arm_score);
-    setBar('BR',  r.br_score);
-
-    // Anomaly types
-    const types = r.anomaly_types.split('|').filter(t => t && t !== 'None');
-    const typesEl = document.getElementById('anomalyTypes');
-    if (types.length === 0 || (types.length === 1 && types[0] === '')) {
-      typesEl.innerHTML = '<span class="badge bg-success">Tidak ada anomali terdeteksi</span>';
-    } else {
-      const typeColors = { 'Control-Flow': 'danger', 'Temporal': 'warning', 'Resource': 'info' };
-      typesEl.innerHTML = types.map(t =>
-        `<span class="badge bg-${typeColors[t] || 'secondary'} me-1">${t}</span>`
-      ).join('');
-    }
-
-    // Explanation
-    document.getElementById('explanation').textContent = r.explanation;
-
-    // Features
-    const grid = document.getElementById('featureGrid');
-    grid.innerHTML = Object.entries(fs).map(([k, v]) => {
-      const displayVal = typeof v === 'boolean' ? (v ? '✅ Ya' : '❌ Tidak') : v;
-      return `<div class="feature-item">
-        <div class="feat-label">${k}</div>
-        <div class="feat-value">${displayVal}</div>
-      </div>`;
-    }).join('');
-
-    // Show/hide panels
-    document.getElementById('placeholderPanel').style.display = 'none';
-    const panel = document.getElementById('resultPanel');
-    panel.style.display = 'block';
-    panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
-  }
-
-  function setBar(name, value) {
-    const pct  = Math.round(value * 100);
-    document.getElementById(`bar${name}`).style.width = `${pct}%`;
-    document.getElementById(`val${name}`).textContent = value.toFixed(3);
-  }
-
-  function showError(msg) {
-    document.getElementById('errorMsg').textContent = msg;
-    new bootstrap.Toast(document.getElementById('errorToast'), { delay: 5000 }).show();
-  }
-
-  // ── Init: 3 default events ─────────────────────────────────────────────────
-  const defaultEvents = [
-    { activity: 'Create Fine',  resource: 'Police-1', timestamp: '2024-01-10T09:00' },
-    { activity: 'Send Fine',    resource: 'Police-1', timestamp: '2024-02-15T10:00' },
-    { activity: 'Payment',      resource: 'Bank-1',   timestamp: '2024-03-20T14:00' },
-  ];
-  defaultEvents.forEach(e => addEvent(e));
-
-  // ── Tab switcher ────────────────────────────────────────────────────────────
-  function switchTab(tab) {
-    document.getElementById('panelManual').style.display = tab === 'manual' ? '' : 'none';
-    document.getElementById('panelCsv').style.display    = tab === 'csv'    ? '' : 'none';
-    document.getElementById('tab-manual').classList.toggle('active', tab === 'manual');
-    document.getElementById('tab-csv').classList.toggle('active', tab === 'csv');
-    // Hide single-case result when switching to CSV tab
-    if (tab === 'csv') {
-      document.getElementById('resultPanel').style.display      = 'none';
-      document.getElementById('placeholderPanel').style.display = '';
-    }
-  }
-
-  // ── CSV file handling ───────────────────────────────────────────────────────
   let _csvFile = null;
 
+  // FILE SELECT
   function onCsvFileChosen(input) {
+
     if (input.files.length > 0) {
+
       _csvFile = input.files[0];
-      document.getElementById('csvFileName').textContent = `📄 ${_csvFile.name}  (${(_csvFile.size/1024).toFixed(1)} KB)`;
-      document.getElementById('btnUploadCsv').disabled = false;
+
+      document.getElementById(
+        'csvFileName'
+      ).textContent =
+
+        `📄 ${_csvFile.name} (${(_csvFile.size/1024).toFixed(1)} KB)`;
+
+      document.getElementById(
+        'btnUploadCsv'
+      ).disabled = false;
     }
   }
 
-  // Drag & drop
+  // DRAG DROP
   const dz = document.getElementById('dropZone');
-  dz.addEventListener('dragover',  e => { e.preventDefault(); dz.classList.add('drag-over'); });
-  dz.addEventListener('dragleave', () => dz.classList.remove('drag-over'));
-  dz.addEventListener('drop', e => {
+
+  dz.addEventListener('dragover', e => {
     e.preventDefault();
+    dz.classList.add('drag-over');
+  });
+
+  dz.addEventListener('dragleave', () => {
     dz.classList.remove('drag-over');
+  });
+
+  dz.addEventListener('drop', e => {
+
+    e.preventDefault();
+
+    dz.classList.remove('drag-over');
+
     const f = e.dataTransfer.files[0];
+
     if (f) {
+
       _csvFile = f;
-      document.getElementById('csvFileName').textContent = `📄 ${f.name}  (${(f.size/1024).toFixed(1)} KB)`;
-      document.getElementById('btnUploadCsv').disabled = false;
+
+      document.getElementById(
+        'csvFileName'
+      ).textContent =
+
+        `📄 ${f.name} (${(f.size/1024).toFixed(1)} KB)`;
+
+      document.getElementById(
+        'btnUploadCsv'
+      ).disabled = false;
     }
   });
 
+  // SUBMIT CSV
   async function submitCsv() {
-    if (!_csvFile) { showError('Pilih file CSV terlebih dahulu.'); return; }
-    document.getElementById('loadingOverlay').classList.add('show');
+
+    if (!_csvFile) {
+
+      showError('Choose CSV file first.');
+
+      return;
+    }
+
+    document.getElementById(
+      'loadingOverlay'
+    ).classList.add('show');
+
     try {
+
       const fd = new FormData();
-      fd.append('file', _csvFile);
-      const resp = await fetch('/classify-csv', { method: 'POST', body: fd });
+
+      fd.append(
+        'file',
+        _csvFile
+      );
+
+      const resp = await fetch(
+        '/classify-csv',
+        {
+          method: 'POST',
+          body: fd
+        }
+      );
+
       const data = await resp.json();
-      if (data.error) { showError(data.error); return; }
+
+      if (data.error) {
+
+        showError(data.error);
+
+        return;
+      }
+
       renderCsvResult(data);
+
     } catch (e) {
-      showError('Kesalahan jaringan: ' + e.message);
+
+      showError(
+        'Network error: ' + e.message
+      );
+
     } finally {
-      document.getElementById('loadingOverlay').classList.remove('show');
+
+      document.getElementById(
+        'loadingOverlay'
+      ).classList.remove('show');
     }
   }
 
+  // RESULT
   let _csvResultData = [];
 
   function renderCsvResult(data) {
+
     _csvResultData = data.results;
+
     const s = data.summary;
 
-    // Summary cards
-    const summaryHTML = `
-      <div class="col-6 col-md-2"><div class="stat-box">
-        <div class="stat-val text-primary">${s.total}</div>
-        <div class="stat-lbl">Total Kasus</div>
-      </div></div>
-      <div class="col-6 col-md-2"><div class="stat-box">
-        <div class="stat-val text-danger">${s.deviant}</div>
-        <div class="stat-lbl">Deviant (${s.deviant_pct}%)</div>
-      </div></div>
-      <div class="col-6 col-md-2"><div class="stat-box">
-        <div class="stat-val text-success">${s.regular}</div>
-        <div class="stat-lbl">Regular</div>
-      </div></div>
-      <div class="col-6 col-md-2"><div class="stat-box">
-        <div class="stat-val text-danger">${s.high_risk}</div>
-        <div class="stat-lbl">High Risk</div>
-      </div></div>
-      <div class="col-6 col-md-2"><div class="stat-box">
-        <div class="stat-val text-warning">${s.medium_risk}</div>
-        <div class="stat-lbl">Medium Risk</div>
-      </div></div>
-      <div class="col-6 col-md-2"><div class="stat-box">
-        <div class="stat-val text-secondary">${s.threshold}</div>
-        <div class="stat-lbl">Threshold</div>
-      </div></div>`;
-    document.getElementById('csvSummary').innerHTML = summaryHTML;
+    // SUMMARY
+    document.getElementById(
+      'csvSummary'
+    ).innerHTML = `
 
-    // Table rows
-    const RISK_ICON = { High: '🔴', Medium: '🟡', Low: '🟢' };
-    const tbody = document.getElementById('csvResultBody');
-    tbody.innerHTML = data.results.map((r, i) => {
-      const match = r.true_label !== 'unknown'
-        ? (r.predicted_label === r.true_label ? '<span class="text-success fw-bold">✅</span>' : '<span class="text-danger fw-bold">❌</span>')
-        : '';
-      const predIcon = r.predicted_label === 'deviant'
-        ? '<span class="badge bg-danger">deviant</span>'
-        : '<span class="badge bg-success">regular</span>';
-      const scoreBar = `<div class="progress" style="height:10px;min-width:70px;">
-        <div class="progress-bar bg-${r.badge_colour}" style="width:${Math.round(r.anomaly_score*100)}%"></div>
-      </div><small>${r.anomaly_score.toFixed(3)}</small>`;
-      const types = r.anomaly_types.split('|').filter(t => t && t !== 'None');
-      const typesBadges = types.length
-        ? types.map(t => `<span class="badge bg-secondary me-1" style="font-size:.7rem;">${t}</span>`).join('')
-        : '<span class="text-muted small">—</span>';
-      return `<tr>
-        <td class="text-muted">${i+1}</td>
-        <td class="fw-semibold">${r.case_id}</td>
-        <td>${r.true_label !== 'unknown' ? r.true_label : '<span class="text-muted">—</span>'} ${match}</td>
-        <td>${predIcon}</td>
-        <td>${scoreBar}</td>
-        <td>${RISK_ICON[r.risk_level] || ''} ${r.risk_level}</td>
-        <td>${typesBadges}</td>
-        <td>${r.ddc_score.toFixed(3)}</td>
-        <td>${r.z_score.toFixed(3)}</td>
-        <td>${r.arm_score.toFixed(3)}</td>
-        <td>${r.br_score.toFixed(3)}</td>
-        <td class="text-muted small" style="max-width:200px;white-space:normal;">${r.explanation}</td>
-      </tr>`;
-    }).join('');
+      <div class="col-md-3">
+        <div class="stat-box">
+          <div class="stat-val text-primary">${s.total}</div>
+          <div class="stat-lbl">Total Cases</div>
+        </div>
+      </div>
 
-    document.getElementById('csvResultSection').style.display = '';
-    document.getElementById('csvResultSection').scrollIntoView({ behavior: 'smooth', block: 'start' });
+      <div class="col-md-3">
+        <div class="stat-box">
+          <div class="stat-val text-danger">${s.deviant}</div>
+          <div class="stat-lbl">Deviant</div>
+        </div>
+      </div>
+
+      <div class="col-md-3">
+        <div class="stat-box">
+          <div class="stat-val text-success">${s.regular}</div>
+          <div class="stat-lbl">Regular</div>
+        </div>
+      </div>
+
+      <div class="col-md-3">
+        <div class="stat-box">
+          <div class="stat-val text-secondary">${s.threshold}</div>
+          <div class="stat-lbl">Threshold</div>
+        </div>
+      </div>
+    `;
+
+    // TABLE
+    document.getElementById(
+      'csvResultBody'
+    ).innerHTML = data.results.map((r, i) => `
+
+      <tr>
+
+        <td>${i+1}</td>
+
+        <td class="fw-semibold">
+          ${r.case_id}
+        </td>
+
+        <td>
+          ${r.true_label}
+        </td>
+
+        <td>
+
+          ${
+            r.predicted_label === 'deviant'
+            ? '<span class="badge bg-danger">deviant</span>'
+            : '<span class="badge bg-success">regular</span>'
+          }
+
+        </td>
+
+        <td>
+          ${r.anomaly_score.toFixed(3)}
+        </td>
+
+        <td>
+          ${r.risk_level}
+        </td>
+
+        <td>
+          ${r.ddc_score.toFixed(3)}
+        </td>
+
+        <td>
+          ${r.z_score.toFixed(3)}
+        </td>
+
+        <td>
+          ${r.arm_score.toFixed(3)}
+        </td>
+
+        <td>
+          ${r.br_score.toFixed(3)}
+        </td>
+
+        <td class="small text-muted">
+          ${r.explanation}
+        </td>
+
+      </tr>
+
+    `).join('');
+
+    document.getElementById(
+      'csvResultSection'
+    ).style.display = '';
+
+    document.getElementById(
+      'csvResultSection'
+    ).scrollIntoView({
+      behavior: 'smooth'
+    });
   }
 
+  // DOWNLOAD
   function downloadCsvResult() {
+
     if (!_csvResultData.length) return;
-    const headers = ['case_id','true_label','predicted_label','anomaly_score','risk_level','anomaly_types','ddc_score','z_score','arm_score','br_score','n_events','explanation'];
-    const rows    = _csvResultData.map(r => headers.map(h => JSON.stringify(r[h] ?? '')).join(','));
-    const blob    = new Blob([headers.join(',') + '\n' + rows.join('\n')], { type: 'text/csv' });
-    const a       = document.createElement('a');
-    a.href        = URL.createObjectURL(blob);
-    a.download    = 'anomaly_results.csv';
+
+    const headers = [
+      'case_id',
+      'true_label',
+      'predicted_label',
+      'anomaly_score',
+      'risk_level',
+      'ddc_score',
+      'z_score',
+      'arm_score',
+      'br_score',
+      'explanation'
+    ];
+
+    const rows = _csvResultData.map(
+      r => headers.map(
+        h => JSON.stringify(r[h] ?? '')
+      ).join(',')
+    );
+
+    const blob = new Blob(
+      [
+        headers.join(',') +
+        '\n' +
+        rows.join('\n')
+      ],
+      {
+        type: 'text/csv'
+      }
+    );
+
+    const a = document.createElement('a');
+
+    a.href = URL.createObjectURL(blob);
+
+    a.download = 'anomaly_results.csv';
+
     a.click();
   }
 
+  // ERROR
+  function showError(msg) {
+
+    document.getElementById(
+      'errorMsg'
+    ).textContent = msg;
+
+    new bootstrap.Toast(
+
+      document.getElementById(
+        'errorToast'
+      ),
+
+      {
+        delay: 5000
+      }
+
+    ).show();
+  }
 
 </script>
+
 </body>
 </html>
