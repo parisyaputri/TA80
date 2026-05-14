@@ -691,18 +691,25 @@ def train_and_detect(csv_path):
     )
 
     final_df['threshold'] = threshold
-    final_df['threshold_method'] = threshold_method
+
+    final_df['threshold_method'] = (
+        threshold_method
+    )
+
     final_df['predicted_label'] = np.where(
         final_df['anomaly_score'] >= threshold,
         'deviant',
         'regular'
     )
 
-    final_df['risk_level'] = np.where(
-        final_df['predicted_label'] == 'deviant',
-        'High',
-        'Low'
-    )
+    # =====================================================
+    # KEEP ORIGINAL ADAPTIVE RISK LEVEL
+    # dari IntelligentBody
+    # jangan overwrite lagi
+    # =====================================================
+    if 'risk_level' not in final_df.columns:
+
+        final_df['risk_level'] = 'Low'
 
     # ===== SAVE MODEL =====
     model_bundle = {

@@ -231,6 +231,7 @@
                 <th>Z</th>
                 <th>ARM</th>
                 <th>BR</th>
+                <th>Anomaly Type</th>
                 <th>Explanation</th>
               </tr>
             </thead>
@@ -371,7 +372,7 @@
     } catch (e) {
 
       showError(
-        'Network error: ' e.message
+        'Network error: ' + e.message
       );
 
     } finally {
@@ -392,37 +393,97 @@
     const s = data.summary;
 
     // SUMMARY
+
+    const highRisk =
+      data.summary.high_risk || 0;
+
+    const mediumRisk =
+      data.summary.medium_risk || 0;
+
+    const lowRisk =
+      data.summary.low_risk || 0;
+
     document.getElementById(
       'csvSummary'
     ).innerHTML = `
 
       <div class="col-md-3">
         <div class="stat-box">
-          <div class="stat-val text-primary">${s.total}</div>
-          <div class="stat-lbl">Total Cases</div>
+          <div class="stat-val text-primary">
+            ${s.total}
+          </div>
+          <div class="stat-lbl">
+            TOTAL CASES
+          </div>
         </div>
       </div>
 
       <div class="col-md-3">
         <div class="stat-box">
-          <div class="stat-val text-danger">${s.deviant}</div>
-          <div class="stat-lbl">Deviant</div>
+          <div class="stat-val text-danger">
+            ${s.deviant}
+          </div>
+          <div class="stat-lbl">
+            DEVIANT
+          </div>
         </div>
       </div>
 
       <div class="col-md-3">
         <div class="stat-box">
-          <div class="stat-val text-success">${s.regular}</div>
-          <div class="stat-lbl">Regular</div>
+          <div class="stat-val text-success">
+            ${s.regular}
+          </div>
+          <div class="stat-lbl">
+            REGULAR
+          </div>
         </div>
       </div>
 
       <div class="col-md-3">
         <div class="stat-box">
-          <div class="stat-val text-secondary">${s.threshold}</div>
-          <div class="stat-lbl">Threshold</div>
+          <div class="stat-val text-secondary">
+            ${s.threshold}
+          </div>
+          <div class="stat-lbl">
+            THRESHOLD
+          </div>
         </div>
       </div>
+
+      <div class="col-md-4 mt-3">
+        <div class="stat-box">
+          <div class="stat-val text-danger">
+            ${highRisk}
+          </div>
+          <div class="stat-lbl">
+            HIGH RISK
+          </div>
+        </div>
+      </div>
+
+      <div class="col-md-4 mt-3">
+        <div class="stat-box">
+          <div class="stat-val text-warning">
+            ${mediumRisk}
+          </div>
+          <div class="stat-lbl">
+            MEDIUM RISK
+          </div>
+        </div>
+      </div>
+
+      <div class="col-md-4 mt-3">
+        <div class="stat-box">
+          <div class="stat-val text-success">
+            ${lowRisk}
+          </div>
+          <div class="stat-lbl">
+            LOW RISK
+          </div>
+        </div>
+      </div>
+
     `;
 
     // TABLE
@@ -473,12 +534,16 @@
         </td>
 
         <td>
-          ${r.br_score.toFixed(3)}
-        </td>
+        ${r.br_score.toFixed(3)}
+      </td>
 
-        <td class="small text-muted">
-          ${r.explanation}
-        </td>
+      <td>
+        ${r.anomaly_types}
+      </td>
+
+      <td class="small text-muted">
+        ${r.explanation}
+      </td>
 
       </tr>
 
