@@ -164,7 +164,7 @@ class MVARMiner:
         self,
         min_support=0.05,
         min_confidence=0.6,
-        min_lift=1.2
+        min_lift=1.0
     ):
 
         self.min_support = min_support
@@ -177,11 +177,13 @@ class MVARMiner:
             'resource': None
         }
 
+        self.thresholds = {}
         self._items_func = self._discretize
 
     def _discretize(self, df):
 
         items = pd.DataFrame(index=df.index)
+        thresholds = self.thresholds
 
         # ===== CONTROL FLOW =====
         items['CF_seq_violation'] = (
@@ -204,6 +206,14 @@ class MVARMiner:
             df['cf_has_penalty'] == 1
         )
 
+        items['CF_no_penalty'] = (
+            df['cf_has_penalty'] == 0
+        )
+
+        items['CF_has_payment'] = (
+            df['cf_has_payment'] == 1
+        )
+
         items['CF_no_payment'] = (
             df['cf_has_payment'] == 0
         )
@@ -211,12 +221,22 @@ class MVARMiner:
         items['CF_too_many_events'] = (
             df['cf_n_events']
             >
-            df['cf_n_events'].quantile(0.90)
+            thresholds.get(
+                'cf_n_events_q90',
+                df['cf_n_events'].quantile(0.90)
+            )
         )
 
         # ===== TEMPORAL =====
-        med_hrs = df['temp_total_hrs'].median()
-        std_hrs = df['temp_total_hrs'].std()
+        med_hrs = thresholds.get(
+            'temp_total_median',
+            df['temp_total_hrs'].median()
+        )
+
+        std_hrs = thresholds.get(
+            'temp_total_std',
+            df['temp_total_hrs'].std()
+        )
 
         items['TEMP_very_fast'] = (
             df['temp_total_hrs']
@@ -231,13 +251,19 @@ class MVARMiner:
         items['TEMP_high_variance'] = (
             df['temp_std_step_hrs']
             >
-            df['temp_std_step_hrs'].quantile(0.75)
+            thresholds.get(
+                'temp_std_step_q75',
+                df['temp_std_step_hrs'].quantile(0.75)
+            )
         )
 
         items['TEMP_long_max_step'] = (
             df['temp_max_step_hrs']
             >
-            df['temp_max_step_hrs'].quantile(0.90)
+            thresholds.get(
+                'temp_max_step_q90',
+                df['temp_max_step_hrs'].quantile(0.90)
+            )
         )
 
         # ===== RESOURCE =====
@@ -248,7 +274,10 @@ class MVARMiner:
         items['RES_too_many_resources'] = (
             df['res_n_resources']
             >
-            df['res_n_resources'].quantile(0.90)
+            thresholds.get(
+                'res_n_resources_q90',
+                df['res_n_resources'].quantile(0.90)
+            )
         )
 
         items['RES_rpa_involved'] = (
@@ -259,23 +288,54 @@ class MVARMiner:
         items['RES_high_expense'] = (
             df['expense']
             >
-            df['expense'].quantile(0.90)
+            thresholds.get(
+                'expense_q90',
+                df['expense'].quantile(0.90)
+            )
         )
 
         items['RES_high_amount'] = (
             df['amount']
             >
-            df['amount'].quantile(0.90)
+            thresholds.get(
+                'amount_q90',
+                df['amount'].quantile(0.90)
+            )
         )
 
         return items
 
     def fit(self, train_df):
 
+        self.thresholds = {
+            'cf_n_events_q90':
+                train_df['cf_n_events'].quantile(0.90),
+
+            'temp_total_median':
+                train_df['temp_total_hrs'].median(),
+
+            'temp_total_std':
+                train_df['temp_total_hrs'].std(),
+
+            'temp_std_step_q75':
+                train_df['temp_std_step_hrs'].quantile(0.75),
+
+            'temp_max_step_q90':
+                train_df['temp_max_step_hrs'].quantile(0.90),
+
+            'res_n_resources_q90':
+                train_df['res_n_resources'].quantile(0.90),
+
+            'expense_q90':
+                train_df['expense'].quantile(0.90),
+
+            'amount_q90':
+                train_df['amount'].quantile(0.90),
+        }
+
         items = self._discretize(train_df)
 
         for view, cols in [
-
             (
                 'cf',
                 [
@@ -283,7 +343,6 @@ class MVARMiner:
                     if c.startswith('CF_')
                 ]
             ),
-
             (
                 'temporal',
                 [
@@ -291,7 +350,6 @@ class MVARMiner:
                     if c.startswith('TEMP_')
                 ]
             ),
-
             (
                 'resource',
                 [
@@ -323,6 +381,20 @@ class MVARMiner:
                         rules['lift']
                         >= self.min_lift
                     ].copy()
+
+                    rules = rules[
+                        rules['consequents'].apply(len)
+                        == 1
+                    ].copy()
+
+                    rules = rules.sort_values(
+                        by=[
+                            'confidence',
+                            'lift',
+                            'support'
+                        ],
+                        ascending=False
+                    )
 
                     self.rules[view] = rules
 
@@ -356,6 +428,10 @@ class MVARMiner:
                     rule['antecedents']
                 )
 
+                consequent = set(
+                    rule['consequents']
+                )
+
                 if all(
                     items.get(
                         a,
@@ -364,13 +440,25 @@ class MVARMiner:
                     for a in antecedent
                 ):
 
-                    triggered.append({
-                        'view': view,
-                        'rule': f"{set(rule['antecedents'])} => {set(rule['consequents'])}",
-                        'confidence': round(rule['confidence'], 3),
-                        'lift': round(rule['lift'], 3),
-                        'support': round(rule['support'], 3),
-                    })
+                    missing_consequents = [
+                        c
+                        for c in consequent
+                        if not items.get(
+                            c,
+                            pd.Series([False])
+                        ).values[0]
+                    ]
+
+                    if missing_consequents:
+
+                        triggered.append({
+                            'view': view,
+                            'rule': f"{antecedent} => {consequent}",
+                            'missing': '|'.join(missing_consequents),
+                            'confidence': round(rule['confidence'], 3),
+                            'lift': round(rule['lift'], 3),
+                            'support': round(rule['support'], 3),
+                        })
 
         return triggered
 
@@ -388,7 +476,6 @@ class IntelligentBody:
         self.ddc = ddc
         self.mva = mv_arm_miner
 
-        # adaptive score distribution
         self.all_scores = []
 
     def score_case(self, row):
@@ -398,9 +485,21 @@ class IntelligentBody:
         # =====================================================
         # DDC SCORE
         # =====================================================
+        total_possible_constraints = (
+            len(self.ddc.constraints)
+            +
+            len(self.ddc.hard_rules)
+        )
+
+        ddc_score = (
+            len(ddc_viols)
+            /
+            max(total_possible_constraints, 1)
+        )
+
         ddc_score = min(
             1.0,
-            len(ddc_viols) / 6.0
+            ddc_score
         )
 
         # =====================================================
@@ -419,9 +518,17 @@ class IntelligentBody:
             for c in key_z_features
         ]
 
+        z_normalized = np.tanh(
+            z_vals
+        )
+
+        z_composite = float(
+            np.mean(z_normalized)
+        )
+
         z_composite = min(
             1.0,
-            np.mean(z_vals) / 3.0
+            z_composite
         )
 
         # =====================================================
@@ -429,44 +536,72 @@ class IntelligentBody:
         # =====================================================
         row_df = pd.DataFrame([row])
 
-        triggered = self.mva.check_case(row_df)
+        triggered = self.mva.check_case(
+            row_df
+        )
 
         if len(triggered) > 0:
 
-            arm_score = np.mean([
-                r['confidence'] * r['lift']
+            all_lifts = [
+                r['lift']
                 for r in triggered
-            ])
+            ]
+
+            max_lift = max(
+                all_lifts
+            ) if all_lifts else 1.0
+
+            arm_values = []
+
+            for r in triggered:
+
+                conf = r['confidence']
+
+                lift = r['lift']
+
+                normalized_lift = (
+                    lift / max_lift
+                )
+
+                arm_values.append(
+                    (
+                        conf
+                        +
+                        normalized_lift
+                    ) / 2
+                )
+
+            arm_score = np.mean(
+                arm_values
+            )
 
         else:
             arm_score = 0.0
 
-        arm_score = min(1.0, arm_score)
+        arm_score = min(
+            1.0,
+            arm_score
+        )
 
         # =====================================================
         # BUSINESS RULE SCORE
         # =====================================================
         rules = [
 
-            # abnormal sequence
             row['cf_seq_violations'] > 1,
 
-            # missing steps
             row['cf_missing_steps'] > 0,
 
-            # appeal without payment
             (
                 row['cf_has_appeal'] == 1
                 and row['cf_has_payment'] == 0
             ),
 
-            # penalty escalation
             (
                 row['cf_has_penalty'] == 1
                 and row['cf_has_payment'] == 0
             ),
 
-            # abnormal duration
             (
                 row['temp_total_hrs']
                 >
@@ -486,7 +621,10 @@ class IntelligentBody:
             max(total_rules, 1)
         )
 
-        br_score = min(1.0, br_score)
+        br_score = min(
+            1.0,
+            br_score
+        )
 
         # =====================================================
         # DYNAMIC WEIGHTED FUSION
@@ -510,29 +648,42 @@ class IntelligentBody:
             min(1.0, composite)
         )
 
-        # simpan distribusi score
-        self.all_scores.append(composite)
+        self.all_scores.append(
+            composite
+        )
 
         # =====================================================
         # ADAPTIVE RISK THRESHOLD
         # =====================================================
+        risk = 'Low'
+
         if len(self.all_scores) >= 10:
 
             high_threshold = np.percentile(
                 self.all_scores,
-                90
+                80
             )
 
             medium_threshold = np.percentile(
                 self.all_scores,
-                70
+                50
             )
 
         else:
 
-            # fallback awal
-            high_threshold = 0.75
-            medium_threshold = 0.50
+            current_scores = (
+                self.all_scores
+                if self.all_scores
+                else [composite]
+            )
+
+            high_threshold = np.max(
+                current_scores
+            )
+
+            medium_threshold = np.median(
+                current_scores
+            )
 
         if composite >= high_threshold:
             risk = 'High'
@@ -540,15 +691,11 @@ class IntelligentBody:
         elif composite >= medium_threshold:
             risk = 'Medium'
 
-        else:
-            risk = 'Low'
-
         # =====================================================
         # ANOMALY TYPE IDENTIFICATION
         # =====================================================
         anomaly_types = []
 
-        # control-flow anomaly
         if (
             row['cf_seq_violations'] > 0
             or row['cf_missing_steps'] > 0
@@ -558,17 +705,30 @@ class IntelligentBody:
                 'Control-Flow'
             )
 
-        # temporal anomaly
+        z_mean = np.mean(
+            z_vals
+        )
+
+        z_std = np.std(
+            z_vals
+        )
+
+        adaptive_z_threshold = (
+            z_mean + z_std
+        )
+
         if (
-            z_vals[1] > 2.5
-            or z_vals[2] > 2.5
+            z_vals[1]
+            > adaptive_z_threshold
+            or
+            z_vals[2]
+            > adaptive_z_threshold
         ):
 
             anomaly_types.append(
                 'Temporal'
             )
 
-        # resource anomaly
         resource_threshold = (
             self.dt.baseline[
                 'res_n_resources'
@@ -585,7 +745,6 @@ class IntelligentBody:
                 'Resource'
             )
 
-        # automation / bot anomaly
         if row['res_rpa_flag'] == 1:
 
             anomaly_types.append(
@@ -593,7 +752,10 @@ class IntelligentBody:
             )
 
         if not anomaly_types:
-            anomaly_types.append('None')
+
+            anomaly_types.append(
+                'None'
+            )
 
         return {
 
@@ -646,6 +808,11 @@ class IntelligentBody:
                 4
             ),
 
+            'adaptive_z_threshold': round(
+                adaptive_z_threshold,
+                4
+            ),
+
             'explanation': self._explain(
                 ddc_viols,
                 triggered,
@@ -669,7 +836,8 @@ class IntelligentBody:
         if ddc_viols:
 
             parts.append(
-                f"DDC violations: {'; '.join(ddc_viols[:3])}"
+                f"DDC violations: "
+                f"{'; '.join(ddc_viols[:3])}"
             )
 
         top_z = sorted(
@@ -680,7 +848,8 @@ class IntelligentBody:
         if top_z[0][1] > 2:
 
             parts.append(
-                f"High z-score: {top_z[0][0]} "
+                f"High z-score: "
+                f"{top_z[0][0]} "
                 f"(z={top_z[0][1]:.2f})"
             )
 
@@ -704,10 +873,16 @@ class IntelligentBody:
 
         for _, row in df.iterrows():
 
-            r = self.score_case(row)
+            r = self.score_case(
+                row
+            )
 
-            r['case_id'] = row['case_id']
+            r['case_id'] = row[
+                'case_id'
+            ]
 
             results.append(r)
 
-        return pd.DataFrame(results)
+        return pd.DataFrame(
+            results
+        )
