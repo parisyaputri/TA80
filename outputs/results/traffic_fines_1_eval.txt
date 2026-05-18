@@ -1,0 +1,28 @@
+===== DT-IB ADAPTIVE MODEL =====
+
+
+===== EVALUATION RESULTS =====
+Accuracy  : 0.8966
+Precision : 0.8286
+Recall    : 0.9745
+F1-Score  : 0.8956
+FAR       : 0.1685
+MCC       : 0.8048
+AUC-ROC   : 0.8938
+AUC-PR    : 0.7577
+
+===== CLASSIFICATION REPORT =====
+              precision    recall  f1-score   support
+
+     deviant       0.83      0.97      0.90     59013
+     regular       0.98      0.83      0.90     70602
+
+    accuracy                           0.90    129615
+   macro avg       0.90      0.90      0.90    129615
+weighted avg       0.91      0.90      0.90    129615
+
+
+===== CONFUSION MATRIX =====
+                Predicted Regular  Predicted Deviant
+Actual Regular              58705              11897
+Actual Deviant               1505              57508
