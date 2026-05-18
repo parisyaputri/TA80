@@ -1,0 +1,28 @@
+===== BASELINE SINGLE-VIEW ARM =====
+
+
+===== EVALUATION RESULTS =====
+Accuracy  : 0.5110
+Precision : 0.0396
+Recall    : 0.0032
+F1-Score  : 0.0059
+FAR       : 0.0646
+MCC       : -0.1628
+AUC-ROC   : 0.4694
+AUC-PR    : 0.4545
+
+===== CLASSIFICATION REPORT =====
+              precision    recall  f1-score   support
+
+     deviant       0.04      0.00      0.01     59013
+     regular       0.53      0.94      0.68     70602
+
+    accuracy                           0.51    129615
+   macro avg       0.28      0.47      0.34    129615
+weighted avg       0.31      0.51      0.37    129615
+
+
+===== CONFUSION MATRIX =====
+                Predicted Regular  Predicted Deviant
+Actual Regular              66041               4561
+Actual Deviant              58825                188
