@@ -9,6 +9,7 @@ sys.path.append(
 
 from utils.evaluation import evaluate_model
 from train_pipeline import train_and_detect
+from utils.save_evaluation import save_evaluation
 
 app = Flask(__name__)
 
@@ -61,7 +62,7 @@ def home():
 # =========================================================
 @app.route('/classify-csv', methods=['POST'])
 def upload_csv():
-
+    print("\nUPLOAD CSV TRIGGERED")
     try:
 
         # ===== CHECK FILE =====
@@ -89,6 +90,7 @@ def upload_csv():
 
         # ===== TRAIN & DETECT =====
         result = train_and_detect(filepath)
+        print("\nTRAIN & DETECT FINISHED")
 
         # ===== LOAD RESULT CSV =====
         result_csv_path = (
@@ -124,16 +126,75 @@ def upload_csv():
                         else 'regular'
                 )
 
-            evaluate_model(
-                y_true,
-                y_pred
+            y_scores = (
+                df['anomaly_score']
+                if 'anomaly_score' in df.columns
+                else None
             )
 
-        else:
+            print("\n===== DT-IB ADAPTIVE MODEL =====")
 
-            print("\n===== EVALUATION SKIPPED =====")
-            print("Column 'label' not found")
+            save_evaluation(
+                y_true,
+                y_pred,
+                y_scores,
 
+                BASE_DIR /
+                'dataOutput' /
+                'results' /
+                f'{Path(file.filename).stem}_eval.txt',
+
+                'DT-IB ADAPTIVE MODEL'
+            )
+
+            if 'static_dc_predicted_label' in df.columns:
+
+                print("\n===== BASELINE: STATIC DC =====")
+
+                save_evaluation(
+                    y_true,
+                    df['static_dc_predicted_label'],
+
+                    (
+                        df['static_dc_score']
+                        if 'static_dc_score' in df.columns
+                        else None
+                    ),
+
+                    BASE_DIR /
+                    'dataOutput' /
+                    'results' /
+                    f'{Path(file.filename).stem}_static_dc_eval.txt',
+
+                    'BASELINE STATIC DC'
+                )
+
+            if 'single_arm_predicted_label' in df.columns:
+
+                print("\n===== BASELINE: SINGLE-VIEW ARM =====")
+
+                save_evaluation(
+                    y_true,
+                    df['single_arm_predicted_label'],
+
+                    (
+                        df['single_arm_score']
+                        if 'single_arm_score' in df.columns
+                        else None
+                    ),
+
+                    BASE_DIR /
+                    'dataOutput' /
+                    'results' /
+                    f'{Path(file.filename).stem}_single_arm_eval.txt',
+
+                    'BASELINE SINGLE-VIEW ARM'
+                )
+
+            else:
+
+                print("\n===== EVALUATION SKIPPED =====")
+                print("Column 'label' not found")
         # =================================================
         # FORMAT RESULTS
         # =================================================

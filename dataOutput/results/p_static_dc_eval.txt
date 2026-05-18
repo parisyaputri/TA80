@@ -1,0 +1,28 @@
+===== BASELINE STATIC DC =====
+
+
+===== EVALUATION RESULTS =====
+Accuracy  : 0.8633
+Precision : 0.7857
+Recall    : 0.9851
+F1-Score  : 0.8742
+FAR       : 0.2500
+MCC       : 0.7511
+AUC-ROC   : 0.7548
+AUC-PR    : 0.7769
+
+===== CLASSIFICATION REPORT =====
+              precision    recall  f1-score   support
+
+     deviant       0.79      0.99      0.87        67
+     regular       0.98      0.75      0.85        72
+
+    accuracy                           0.86       139
+   macro avg       0.88      0.87      0.86       139
+weighted avg       0.89      0.86      0.86       139
+
+
+===== CONFUSION MATRIX =====
+                Predicted Regular  Predicted Deviant
+Actual Regular                 54                 18
+Actual Deviant                  1                 66
