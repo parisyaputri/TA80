@@ -1,15 +1,4 @@
-# ============================================
-# FILE: app/services.py
-# ============================================
-
-from pathlib import Path
-
 import pandas as pd
-
-from utils.result_handler import (
-    save_evaluation
-)
-
 
 def clean_text(value, default=''):
 
@@ -79,66 +68,6 @@ def run_evaluations(
         if 'anomaly_score' in df.columns
         else None
     )
-
-    print("\n===== DT-IB ADAPTIVE MODEL =====")
-
-    save_evaluation(
-        y_true,
-        y_pred,
-        y_scores,
-
-        base_dir /
-        'outputs' /
-        'results' /
-        f'{Path(file.filename).stem}_eval.txt',
-
-        'DT-IB ADAPTIVE MODEL'
-    )
-
-    if 'static_dc_predicted_label' in df.columns:
-
-        print("\n===== BASELINE: STATIC DC =====")
-
-        save_evaluation(
-            y_true,
-            df['static_dc_predicted_label'],
-
-            (
-                df['static_dc_score']
-                if 'static_dc_score' in df.columns
-                else None
-            ),
-
-            base_dir /
-            'outputs' /
-            'results' /
-            f'{Path(file.filename).stem}_static_dc_eval.txt',
-
-            'BASELINE STATIC DC'
-        )
-
-    if 'single_arm_predicted_label' in df.columns:
-
-        print("\n===== BASELINE: SINGLE-VIEW ARM =====")
-
-        save_evaluation(
-            y_true,
-            df['single_arm_predicted_label'],
-
-            (
-                df['single_arm_score']
-                if 'single_arm_score' in df.columns
-                else None
-            ),
-
-            base_dir /
-            'outputs' /
-            'results' /
-            f'{Path(file.filename).stem}_single_arm_eval.txt',
-
-            'BASELINE SINGLE-VIEW ARM'
-        )
-
 
 def format_results(df):
 

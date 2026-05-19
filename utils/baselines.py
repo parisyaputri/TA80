@@ -5,6 +5,9 @@ from utils.thresholding import (
     choose_detection_threshold
 )
 
+from models.lstm_baseline import LSTMBaseline
+from models.transformer_baseline import TransformerBaseline
+
 def add_lightweight_baselines(final_df, mv_arm):
     static_components = pd.DataFrame(index=final_df.index)
     static_components['cf'] = (
@@ -54,3 +57,22 @@ def add_lightweight_baselines(final_df, mv_arm):
 
     return final_df
 
+def run_lstm_baseline(X_train, X_test):
+
+    model = LSTMBaseline()
+
+    model.fit(X_train)
+
+    return model.predict(X_test)
+
+def run_transformer_baseline(
+    X_train,
+    y_train,
+    X_test
+):
+
+    model = TransformerBaseline()
+
+    model.fit(X_train, y_train)
+
+    return model.predict(X_test)

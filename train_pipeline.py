@@ -1,5 +1,6 @@
 import numpy as np
 import pandas as pd
+from pathlib import Path
 
 from models.digital_twin import DigitalTwin
 from models.ddc import DynamicDeclarativeConstraints
@@ -27,13 +28,24 @@ from utils.baselines import (
 )
 
 from utils.result_handler import (
-    save_outputs
+    save_outputs,
+    save_evaluation
+)
+
+from utils.statistical_tests import (
+    run_wilcoxon_test,
+    compute_cohens_d,
+    apply_bonferroni
 )
 
 from configs.paths import (
     OUTPUT_DIR,
     MODEL_DIR,
     RESULT_DIR
+)
+
+from utils.evaluation import (
+    evaluate_model
 )
 
 MODEL_DIR.mkdir(
@@ -274,6 +286,125 @@ def train_and_detect(csv_path):
         final_df,
         mv_arm
     )
+    
+    print(final_df.columns.tolist())
+    
+    # =====================================================
+    # EVALUATION
+    # =====================================================
+
+    metrics = None
+
+    if 'label' in final_df.columns:
+
+        metrics = evaluate_model(
+            y_true=final_df['label'],
+            y_pred=final_df['predicted_label'],
+            y_scores=final_df['anomaly_score']
+        )
+        
+        # =====================================================
+        # STATISTICAL TESTING
+        # =====================================================
+
+        if (
+            metrics is not None and
+            'single_arm_score' in final_df.columns
+        ):
+
+            baseline_scores = (
+                final_df['single_arm_score']
+            )
+
+            proposed_scores = (
+                final_df['anomaly_score']
+            )
+
+            wilcoxon_stat, p_value = (
+                run_wilcoxon_test(
+                    proposed_scores,
+                    baseline_scores
+                )
+            )
+
+            cohens_d = compute_cohens_d(
+                proposed_scores,
+                baseline_scores
+            )
+
+            corrected_p = apply_bonferroni(
+                [p_value]
+            )
+
+            print(
+                "\n===== STATISTICAL TESTING ====="
+            )
+
+            print(
+                f"Wilcoxon Statistic : "
+                f"{wilcoxon_stat:.4f}"
+            )
+
+            print(
+                f"P-Value            : "
+                f"{p_value:.6f}"
+            )
+
+            print(
+                f"Cohen's d          : "
+                f"{cohens_d:.4f}"
+            )
+
+            print(
+                f"Bonferroni Correct : "
+                f"{corrected_p[0]:.6f}"
+            )
+    # =====================================================
+    # SAVE EVALUATION REPORT
+    # =====================================================
+
+    if 'label' in final_df.columns:
+
+        dataset_name = Path(
+            csv_path
+        ).stem
+
+        evaluation_path = (
+            RESULT_DIR /
+            f"{dataset_name}_eval.txt"
+        )
+
+        evaluations = [
+            {
+                'title': 'DT-IB ADAPTIVE MODEL',
+                'y_true': final_df['label'],
+                'y_pred': final_df['predicted_label'],
+                'y_scores': final_df['anomaly_score'],
+                'statistical_testing': {
+                    'wilcoxon': wilcoxon_stat,
+                    'p_value': p_value,
+                    'cohens_d': cohens_d,
+                    'bonferroni': corrected_p[0]
+                }
+            },
+            {
+                'title': 'BASELINE: STATIC DC',
+                'y_true': final_df['label'],
+                'y_pred': final_df['static_dc_predicted_label'],
+                'y_scores': final_df['static_dc_score']
+            },
+            {
+                'title': 'BASELINE: SINGLE-VIEW ARM',
+                'y_true': final_df['label'],
+                'y_pred': final_df['single_arm_predicted_label'],
+                'y_scores': final_df['single_arm_score']
+            }
+        ]
+
+        save_evaluation(
+            evaluations,
+            evaluation_path
+        )
 
     # =====================================================
     # SAVE OUTPUTS

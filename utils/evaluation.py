@@ -157,3 +157,14 @@ def evaluate_model(
     print("\n===== CONFUSION MATRIX =====")
 
     print(cm_df)
+
+    return {
+        "accuracy": accuracy,
+        "precision": precision,
+        "recall": recall,
+        "f1": f1,
+        "far": far,
+        "mcc": mcc,
+        "auc_roc": auc_roc,
+        "auc_pr": auc_pr
+    }
