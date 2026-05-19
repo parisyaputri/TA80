@@ -6,7 +6,7 @@ from pathlib import Path
 
 import pandas as pd
 
-from utils.save_evaluation import (
+from utils.result_handler import (
     save_evaluation
 )
 

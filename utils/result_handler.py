@@ -3,6 +3,8 @@ from io import StringIO
 from contextlib import redirect_stdout
 
 from utils.evaluation import evaluate_model
+import pickle
+
 
 
 def save_evaluation(
@@ -46,4 +48,31 @@ def save_evaluation(
 
         f.write(evaluation_text)
         
-        
+def save_outputs(
+    model_bundle,
+    final_df,
+    model_dir,
+    result_dir
+):
+
+    with open(
+        model_dir / 'tf_model_bundle.pkl',
+        'wb'
+    ) as f:
+
+        pickle.dump(
+            model_bundle,
+            f
+        )
+
+    output_path = (
+        result_dir
+        / 'prediction_results.csv'
+    )
+
+    final_df.to_csv(
+        output_path,
+        index=False
+    )
+
+    return output_path

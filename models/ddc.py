@@ -1,5 +1,6 @@
 import numpy as np
 import pandas as pd
+from configs.model_config import DDCConfig
 
 from utils.helpers import (
     _safe_float,
@@ -11,9 +12,9 @@ class DynamicDeclarativeConstraints:
 
     def __init__(
         self,
-        z_threshold=2.5,
-        iqr_multiplier=2.0,
-        ewma_margin=0.10
+        z_threshold=DDCConfig.Z_THRESHOLD,
+        iqr_multiplier=DDCConfig.IQR_MULTIPLIER,
+        ewma_margin=DDCConfig.EWMA_MARGIN
     ):
         self.z_threshold = z_threshold
         self.iqr_multiplier = iqr_multiplier

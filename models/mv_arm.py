@@ -1,5 +1,6 @@
 import numpy as np
 import pandas as pd
+from configs.model_config import ARMConfig
 
 from mlxtend.frequent_patterns import (
     apriori,
@@ -16,10 +17,10 @@ class MVARMiner:
 
     def __init__(
         self,
-        min_support=0.06,
-        min_confidence=0.65,
-        min_lift=1.0,
-        max_rules=40
+        min_support=ARMConfig.MIN_SUPPORT,
+        min_confidence=ARMConfig.MIN_CONFIDENCE,
+        min_lift=ARMConfig.MIN_LIFT,
+        max_rules=ARMConfig.MAX_RULES
     ):
         self.min_support = min_support
         self.min_confidence = min_confidence

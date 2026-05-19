@@ -1,5 +1,3 @@
-from pathlib import Path
-
 import numpy as np
 import pandas as pd
 
@@ -28,17 +26,15 @@ from utils.baselines import (
     add_lightweight_baselines
 )
 
-from utils.save_results import (
+from utils.result_handler import (
     save_outputs
 )
 
-
-BASE_DIR = Path(__file__).resolve().parent
-
-OUTPUT_DIR = BASE_DIR / 'outputs'
-
-MODEL_DIR = OUTPUT_DIR / 'model'
-RESULT_DIR = OUTPUT_DIR / 'results'
+from configs.paths import (
+    OUTPUT_DIR,
+    MODEL_DIR,
+    RESULT_DIR
+)
 
 MODEL_DIR.mkdir(
     parents=True,
