@@ -2,19 +2,21 @@
 
 ## 📋 Table of Contents
 
-* Project Overview
-* Features
-* System Architecture
-* Folder Structure
-* Dataset
-* Getting Started
-* Running the Application
-* Model Pipeline
-* API Workflow
-* Output Files
-* Evaluation Metrics
-* Technologies Used
-* Common Issues
+* [Project Overview](#-project-overview)
+* [Features](#-features)
+* [System Architecture](#️-system-architecture)
+* [Folder Structure](#-folder-structure)
+* [Dataset](#-dataset)
+* [Getting Started](#-getting-started)
+* [Running the Application](#️-running-the-application)
+* [Application Workflow](#-application-workflow)
+* [Model Pipeline](#-model-pipeline)
+* [Output Files](#-output-files)
+* [Evaluation Metrics](#-evaluation-metrics)
+* [Technologies Used](#️-technologies-used)
+* [Common Issues](#-common-issues)
+* [Future Improvements](#-future-improvements)
+* [License](#-license)
 
 ---
 
@@ -32,7 +34,6 @@ The application provides:
 
 * CSV upload interface
 * Automatic anomaly detection
-* Risk scoring
 * Evaluation metrics
 * Exportable prediction results
 * Human-readable explanations for detected anomalies
@@ -431,20 +432,6 @@ outputs/
 *.joblib
 venv/
 ```
-
----
-
-# 📌 Future Improvements
-
-Possible future enhancements:
-
-* Real-time event streaming
-* Interactive dashboard visualization
-* Explainable AI visualization
-* Deep learning-based anomaly detection
-* BPMN integration
-* Role mining analysis
-* Process drift detection
 
 ---
 
