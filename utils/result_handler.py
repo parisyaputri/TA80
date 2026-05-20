@@ -121,6 +121,7 @@ def save_outputs(
 
     final_df.to_csv(
         output_path,
+        sep=';',
         index=False
     )
 

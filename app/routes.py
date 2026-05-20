@@ -112,9 +112,9 @@ def upload_csv():
 
         df = pd.read_csv(
             result_csv_path,
+            sep=';',
             keep_default_na=False
         )
-
         # ====================================
         # EVALUATION
         # ====================================
