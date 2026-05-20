@@ -1,5 +1,83 @@
-venv/
+# Python
 __pycache__/
-*.pyc
-.DS_Store
+*.py[cod]
+*.so
+.Python
+build/
+dist/
+*.egg-info/
+
+# Virtual Environment
+venv/
+env/
+ENV/
+.venv/
+
+# Environment Variables
+.env
+*.env
+!.env.example
+
+# IDE & Editors
+.idea/
 .vscode/
+*.swp
+*.swn
+*.swo
+.cursor/
+
+# AI Tools & Hidden Folders
+.claude/
+.copilot/
+.ai/
+.github-copilot/
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+instance/
+
+# Logs
+*.log
+logs/
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+
+# ML Models (uncomment jika tidak mau track)
+# ml_models/*.pkl
+# ml_models/*.h5
+# ml_models/*.joblib
+# ml_models/*.pt
+# ml_models/*.pth
+
+# Uploads
+uploads/*
+!uploads/.gitkeep
+
+# Documentation Build
+docs/_build/
+docs/.doctrees/
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Node.js (jika ada frontend di project)
+node_modules/
+npm-debug.log
+yarn-error.log
+
+# Cache & Temporary
+.cache/
+*.cache
+.mypy_cache/
+.dmypy.json
+.pytype/
+*.tmp
+*.temp
