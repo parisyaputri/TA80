@@ -1,5 +1,5 @@
 import numpy as np
-from sklearn.metrics import f1_score
+from sklearn.metrics import roc_curve
 
 def choose_detection_threshold(final_df, score_col='anomaly_score'):
     scores = final_df[score_col].astype(float)
@@ -10,18 +10,20 @@ def choose_detection_threshold(final_df, score_col='anomaly_score'):
         and final_df['label'].nunique() == 2
     ):
         y_true = final_df['label'].eq('deviant').astype(int)
-        best_threshold = float(scores.min())
-        best_f1 = -1.0
+        fpr, tpr, thresholds = roc_curve(y_true, scores)
+        youden_j = tpr - fpr
 
-        for threshold in sorted(scores.unique()):
-            y_pred = (scores >= threshold).astype(int)
-            current_f1 = f1_score(y_true, y_pred, zero_division=0)
+        finite_mask = np.isfinite(thresholds)
 
-            if current_f1 > best_f1:
-                best_f1 = current_f1
-                best_threshold = float(threshold)
+        if not finite_mask.any():
+            best_threshold = float(scores.min())
+        else:
+            finite_thresholds = thresholds[finite_mask]
+            finite_youden_j = youden_j[finite_mask]
+            best_index = int(np.argmax(finite_youden_j))
+            best_threshold = float(finite_thresholds[best_index])
 
-        return round(best_threshold, 4), f'{score_col}_label_calibrated_f1'
+        return round(best_threshold, 4), f'{score_col}_roc_youden_j'
 
     unique_scores = np.sort(scores.unique())
 
