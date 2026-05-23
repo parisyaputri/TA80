@@ -39,6 +39,12 @@ from utils.statistical_tests import (
     apply_bonferroni
 )
 
+from utils.iterative_baseline import (
+    apply_process_completion_rules,
+    choose_iterative_baseline_threshold,
+    select_stable_baseline_cases
+)
+
 from configs.paths import (
     OUTPUT_DIR,
     MODEL_DIR,
@@ -50,8 +56,7 @@ from utils.evaluation import (
 )
 
 from utils.evaluation_split import (
-    build_case_train_evaluation_split,
-    build_threshold_evaluation_split,
+    FULL_DATASET_SPLIT,
     evaluation_scope,
     threshold_scope
 )
@@ -88,26 +93,11 @@ def train_and_detect(csv_path):
         columns
     )
 
-    train_event_mask, _, _ = build_case_train_evaluation_split(
-        cleaned_df,
-        case_col='_case_id_norm'
-    )
-
-    train_events = cleaned_df.loc[
-        train_event_mask
-    ].copy()
-
-    train_case_ids = set(
-        train_events['_case_id_norm']
-        .astype(str)
-        .unique()
-    )
-
     # =====================================================
-    # PROFILE LEARNING
+    # INITIAL FULL-LOG PROFILE LEARNING
     # =====================================================
 
-    profile_df = train_events
+    profile_df = cleaned_df
 
     profile_grouped = profile_df.groupby(
         '_case_id_norm',
@@ -138,14 +128,7 @@ def train_and_detect(csv_path):
         label_col
     )
 
-    train_feature_df = feature_df
-    train_feature_df = feature_df[
-        feature_df['case_id']
-        .astype(str)
-        .isin(train_case_ids)
-    ].copy()
-
-    train_feature_for_learning = train_feature_df.drop(
+    feature_for_learning = feature_df.drop(
         columns=['label'],
         errors='ignore'
     )
@@ -176,13 +159,13 @@ def train_and_detect(csv_path):
     ]
 
     # =====================================================
-    # MODEL TRAINING
+    # ITERATIVE BASELINE - ROUND 1
     # =====================================================
 
     dt = DigitalTwin()
 
     dt.fit(
-        train_feature_for_learning,
+        feature_for_learning,
         numeric_cols
     )
 
@@ -200,7 +183,7 @@ def train_and_detect(csv_path):
     mv_arm = MVARMiner()
 
     mv_arm.fit(
-        train_feature_for_learning
+        feature_for_learning
     )
 
     ib = IntelligentBody(
@@ -210,13 +193,9 @@ def train_and_detect(csv_path):
     )
 
     ib.calibrate_weights(
-        train_feature_for_learning,
+        feature_for_learning,
         numeric_cols
     )
-
-    # =====================================================
-    # PRECOMPUTE ARM
-    # =====================================================
 
     precomputed_arm = mv_arm.score_dataframe(
         feature_df
@@ -236,9 +215,126 @@ def train_and_detect(csv_path):
         precomputed_arm['violated_arm_rules']
     )
 
+    if len(scoring_df) > 10000:
+
+        initial_result_df = ib.score_all_fast(
+            scoring_df
+        )
+
+    else:
+
+        initial_result_df = ib.score_all(
+            scoring_df
+        )
+
+    initial_final_df = pd.merge(
+        feature_df,
+        initial_result_df,
+        on='case_id'
+    )
+
+    stable_case_ids = select_stable_baseline_cases(
+        initial_final_df
+    )
+
     # =====================================================
-    # ANOMALY SCORING
+    # ITERATIVE BASELINE - ROUND 2
     # =====================================================
+
+    stable_events = cleaned_df[
+        cleaned_df['_case_id_norm']
+        .astype(str)
+        .isin(stable_case_ids)
+    ].copy()
+
+    profile_df = stable_events
+
+    profile_grouped = profile_df.groupby(
+        '_case_id_norm',
+        sort=False
+    )
+
+    cf_profile = learn_control_flow_profile(
+        profile_grouped
+    )
+
+    resource_profile = learn_resource_profile(
+        profile_df
+    )
+
+    case_states = replay_event_states(
+        cleaned_df
+    )
+
+    feature_df = build_case_features(
+        cleaned_df,
+        cf_profile,
+        resource_profile,
+        case_states,
+        label_col
+    )
+
+    baseline_feature_df = feature_df[
+        feature_df['case_id']
+        .astype(str)
+        .isin(stable_case_ids)
+    ].drop(
+        columns=['label'],
+        errors='ignore'
+    )
+
+    dt = DigitalTwin()
+
+    dt.fit(
+        baseline_feature_df,
+        numeric_cols
+    )
+
+    dt.seed_states(case_states)
+
+    ddc = DynamicDeclarativeConstraints()
+
+    ddc.fit(
+        dt,
+        numeric_cols,
+        cf_profile=cf_profile,
+        resource_profile=resource_profile
+    )
+
+    mv_arm = MVARMiner()
+
+    mv_arm.fit(
+        baseline_feature_df
+    )
+
+    ib = IntelligentBody(
+        dt,
+        ddc,
+        mv_arm
+    )
+
+    ib.calibrate_weights(
+        baseline_feature_df,
+        numeric_cols
+    )
+
+    precomputed_arm = mv_arm.score_dataframe(
+        feature_df
+    )
+
+    scoring_df = feature_df.copy()
+
+    scoring_df['_pre_arm_score'] = (
+        precomputed_arm['arm_score']
+    )
+
+    scoring_df['_pre_arm_rules_hit'] = (
+        precomputed_arm['arm_rules_hit']
+    )
+
+    scoring_df['_pre_violated_arm_rules'] = (
+        precomputed_arm['violated_arm_rules']
+    )
 
     if len(scoring_df) > 10000:
 
@@ -252,36 +348,41 @@ def train_and_detect(csv_path):
             scoring_df
         )
 
-    # =====================================================
-    # MERGE RESULTS
-    # =====================================================
-
     final_df = pd.merge(
         feature_df,
         result_df,
         on='case_id'
     )
 
+    final_df['baseline_iteration'] = 2
+    final_df['baseline_role'] = np.where(
+        final_df['case_id'].astype(str).isin(stable_case_ids),
+        'stable_baseline',
+        'candidate_anomaly'
+    )
+
     # =====================================================
     # THRESHOLDING
     # =====================================================
 
-    calibration_mask, test_mask, has_holdout_test = (
-        build_threshold_evaluation_split(
-            final_df
-        )
+    final_df['evaluation_split'] = FULL_DATASET_SPLIT
+
+    calibration_mask = pd.Series(
+        True,
+        index=final_df.index
     )
 
-    threshold_df = final_df.loc[
-        calibration_mask
-    ].drop(
-        columns=['label'],
-        errors='ignore'
+    test_mask = pd.Series(
+        True,
+        index=final_df.index
     )
+
+    has_holdout_test = False
 
     threshold, threshold_method = (
-        choose_detection_threshold(
-            threshold_df
+        choose_iterative_baseline_threshold(
+            final_df,
+            stable_case_ids
         )
     )
 
@@ -302,6 +403,10 @@ def train_and_detect(csv_path):
         'anomaly_score',
         threshold,
         threshold_method
+    )
+
+    final_df['predicted_label'] = apply_process_completion_rules(
+        final_df
     )
 
     if 'risk_level' not in final_df.columns:
@@ -496,5 +601,6 @@ def train_and_detect(csv_path):
         'threshold_scope': current_threshold_scope,
         'calibration_rows': int(calibration_mask.sum()),
         'evaluation_rows': int(test_mask.sum()),
+        'stable_baseline_rows': len(stable_case_ids),
         'result_file': str(output_path.name)
     }

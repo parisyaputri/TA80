@@ -25,6 +25,11 @@ from utils.feature_engineering import (
     learn_resource_profile,
     replay_event_states,
 )
+from utils.iterative_baseline import (
+    apply_process_completion_rules,
+    choose_iterative_baseline_threshold,
+    select_stable_baseline_cases,
+)
 from utils.preprocessing import detect_event_log_columns, preprocess_event_log
 from utils.thresholding import apply_detection_threshold, choose_detection_threshold
 
@@ -78,8 +83,11 @@ def _training_profile(cleaned_df, label_col):
     return cleaned_df
 
 
-def _build_fold_features(train_events, test_events, label_col):
-    profile_df = _training_profile(train_events, label_col)
+def _build_fold_features(train_events, test_events, label_col, profile_events=None):
+    profile_df = profile_events
+
+    if profile_df is None:
+        profile_df = _training_profile(train_events, label_col)
 
     cf_profile = learn_control_flow_profile(
         profile_df.groupby('_case_id_norm', sort=False)
@@ -107,8 +115,23 @@ def _build_fold_features(train_events, test_events, label_col):
     return train_features, test_features, cf_profile, resource_profile, train_states
 
 
-def _fit_fold_model(train_features, cf_profile, resource_profile, train_states):
-    model_train_df = train_features.drop(
+def _fit_fold_model(
+    train_features,
+    cf_profile,
+    resource_profile,
+    train_states,
+    baseline_case_ids=None
+):
+    learning_features = train_features
+
+    if baseline_case_ids is not None:
+        learning_features = train_features[
+            train_features['case_id']
+            .astype(str)
+            .isin(baseline_case_ids)
+        ]
+
+    model_train_df = learning_features.drop(
         columns=['label'],
         errors='ignore',
     )
@@ -241,6 +264,41 @@ def run_kfold(csv_path, n_splits=5, random_state=42, output_dir='outputs/kfold')
         ].copy()
 
         (
+            initial_train_features,
+            _,
+            initial_cf_profile,
+            initial_resource_profile,
+            initial_train_states,
+        ) = _build_fold_features(
+            train_events,
+            test_events,
+            label_col,
+        )
+
+        ib, mv_arm = _fit_fold_model(
+            initial_train_features,
+            initial_cf_profile,
+            initial_resource_profile,
+            initial_train_states,
+        )
+
+        initial_train_scored = _score_features(
+            initial_train_features,
+            ib,
+            mv_arm,
+        )
+
+        stable_case_ids = select_stable_baseline_cases(
+            initial_train_scored
+        )
+
+        stable_train_events = train_events[
+            train_events['_case_id_norm']
+            .astype(str)
+            .isin(stable_case_ids)
+        ].copy()
+
+        (
             train_features,
             test_features,
             cf_profile,
@@ -250,6 +308,7 @@ def run_kfold(csv_path, n_splits=5, random_state=42, output_dir='outputs/kfold')
             train_events,
             test_events,
             label_col,
+            profile_events=stable_train_events,
         )
 
         ib, mv_arm = _fit_fold_model(
@@ -257,14 +316,15 @@ def run_kfold(csv_path, n_splits=5, random_state=42, output_dir='outputs/kfold')
             cf_profile,
             resource_profile,
             train_states,
+            baseline_case_ids=stable_case_ids,
         )
 
         train_scored = _score_features(train_features, ib, mv_arm)
         test_scored = _score_features(test_features, ib, mv_arm)
 
-        threshold, threshold_method = choose_detection_threshold(
-            train_scored.drop(columns=['label'], errors='ignore'),
-            'anomaly_score',
+        threshold, threshold_method = choose_iterative_baseline_threshold(
+            train_scored,
+            stable_case_ids,
         )
 
         test_scored['threshold'] = threshold
@@ -274,6 +334,9 @@ def run_kfold(csv_path, n_splits=5, random_state=42, output_dir='outputs/kfold')
             'anomaly_score',
             threshold,
             threshold_method,
+        )
+        test_scored['predicted_label'] = apply_process_completion_rules(
+            test_scored
         )
 
         test_scored = add_lightweight_baselines(
@@ -296,6 +359,7 @@ def run_kfold(csv_path, n_splits=5, random_state=42, output_dir='outputs/kfold')
             'train_deviant': int(train_features['label'].eq('deviant').sum()),
             'test_regular': int(test_features['label'].eq('regular').sum()),
             'test_deviant': int(test_features['label'].eq('deviant').sum()),
+            'stable_baseline_cases': len(stable_case_ids),
             'threshold': threshold,
             'threshold_method': threshold_method,
             **metrics,
@@ -326,6 +390,7 @@ def run_kfold(csv_path, n_splits=5, random_state=42, output_dir='outputs/kfold')
         'mean_f1': results['f1'].mean(),
         'mean_auc_roc': results['auc_roc'].mean(),
         'mean_auc_pr': results['auc_pr'].mean(),
+        'mean_stable_baseline_cases': results['stable_baseline_cases'].mean(),
     }])
 
     dataset_name = csv_path.stem

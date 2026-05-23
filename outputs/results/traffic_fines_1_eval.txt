@@ -1,94 +1,94 @@
 
-===== DT-IB ADAPTIVE MODEL (HOLDOUT TEST) =====
+===== DT-IB ADAPTIVE MODEL (FULL DATASET) =====
 
 
 ===== EVALUATION RESULTS =====
-Accuracy  : 0.8963
-Precision : 0.8286
-Recall    : 0.9737
-F1-Score  : 0.8953
-FAR       : 0.1684
-MCC       : 0.8041
-AUC-ROC   : 0.8931
-AUC-PR    : 0.7568
+Accuracy  : 0.9296
+Precision : 0.8810
+Recall    : 0.9772
+F1-Score  : 0.9267
+FAR       : 0.1103
+MCC       : 0.8635
+AUC-ROC   : 0.7836
+AUC-PR    : 0.6062
 
 ===== CLASSIFICATION REPORT =====
               precision    recall  f1-score   support
 
-     deviant       0.83      0.97      0.90     29507
-     regular       0.97      0.83      0.90     35301
+     deviant       0.88      0.98      0.93     59013
+     regular       0.98      0.89      0.93     70602
 
-    accuracy                           0.90     64808
-   macro avg       0.90      0.90      0.90     64808
-weighted avg       0.91      0.90      0.90     64808
+    accuracy                           0.93    129615
+   macro avg       0.93      0.93      0.93    129615
+weighted avg       0.93      0.93      0.93    129615
 
 
 ===== CONFUSION MATRIX =====
                 Predicted Regular  Predicted Deviant
-Actual Regular              29358               5943
-Actual Deviant                776              28731
+Actual Regular              62816               7786
+Actual Deviant               1343              57670
 
 ===== STATISTICAL TESTING =====
 
-Wilcoxon Statistic : 148031022.0000
+Wilcoxon Statistic : 801551703.0000
 P-Value            : 0.000000
-Cohen's d          : 1.1650
+Cohen's d          : 1.1381
 Bonferroni Correct : 0.000000
 
-===== BASELINE: STATIC DC (HOLDOUT TEST) =====
+===== BASELINE: STATIC DC (FULL DATASET) =====
 
 
 ===== EVALUATION RESULTS =====
-Accuracy  : 0.6638
-Precision : 0.5761
-Recall    : 0.9899
-F1-Score  : 0.7283
-FAR       : 0.6088
-MCC       : 0.4599
-AUC-ROC   : 0.6290
-AUC-PR    : 0.6312
+Accuracy  : 0.4468
+Precision : 0.4071
+Recall    : 0.4707
+F1-Score  : 0.4366
+FAR       : 0.5731
+MCC       : -0.1021
+AUC-ROC   : 0.6042
+AUC-PR    : 0.6050
 
 ===== CLASSIFICATION REPORT =====
               precision    recall  f1-score   support
 
-     deviant       0.58      0.99      0.73     29507
-     regular       0.98      0.39      0.56     35301
+     deviant       0.41      0.47      0.44     59013
+     regular       0.49      0.43      0.46     70602
 
-    accuracy                           0.66     64808
-   macro avg       0.78      0.69      0.64     64808
-weighted avg       0.80      0.66      0.64     64808
+    accuracy                           0.45    129615
+   macro avg       0.45      0.45      0.45    129615
+weighted avg       0.45      0.45      0.45    129615
 
 
 ===== CONFUSION MATRIX =====
                 Predicted Regular  Predicted Deviant
-Actual Regular              13810              21491
-Actual Deviant                299              29208
+Actual Regular              30141              40461
+Actual Deviant              31237              27776
 
-===== BASELINE: SINGLE-VIEW ARM (HOLDOUT TEST) =====
+===== BASELINE: SINGLE-VIEW ARM (FULL DATASET) =====
 
 
 ===== EVALUATION RESULTS =====
-Accuracy  : 0.5447
-Precision : 0.0000
-Recall    : 0.0000
-F1-Score  : 0.0000
-FAR       : 0.0000
-MCC       : 0.0000
-AUC-ROC   : 0.4693
-AUC-PR    : 0.4544
+Accuracy  : 0.5127
+Precision : 0.3352
+Recall    : 0.0716
+F1-Score  : 0.1179
+FAR       : 0.1187
+MCC       : -0.0792
+AUC-ROC   : 0.4793
+AUC-PR    : 0.4724
 
 ===== CLASSIFICATION REPORT =====
               precision    recall  f1-score   support
 
-     deviant       0.00      0.00      0.00     29507
-     regular       0.54      1.00      0.71     35301
+     deviant       0.34      0.07      0.12     59013
+     regular       0.53      0.88      0.66     70602
 
-    accuracy                           0.54     64808
-   macro avg       0.27      0.50      0.35     64808
-weighted avg       0.30      0.54      0.38     64808
+    accuracy                           0.51    129615
+   macro avg       0.43      0.48      0.39    129615
+weighted avg       0.44      0.51      0.42    129615
 
 
 ===== CONFUSION MATRIX =====
                 Predicted Regular  Predicted Deviant
-Actual Regular              35301                  0
-Actual Deviant              29507                  0
+Actual Regular              62225               8377
+Actual Deviant              54790               4223

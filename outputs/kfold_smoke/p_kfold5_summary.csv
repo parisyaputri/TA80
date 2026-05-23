@@ -1,2 +1,0 @@
-dataset,n_splits,random_state,total_cases,regular_cases,deviant_cases,mean_accuracy,std_accuracy,min_accuracy,max_accuracy,best_fold,mean_f1,mean_auc_roc,mean_auc_pr
-p.csv,5,42,139,72,67,0.9140211640211641,0.0594870550840446,0.8214285714285714,0.9642857142857143,3,0.9193265993265992,0.8549031920460491,0.7465457738685632
