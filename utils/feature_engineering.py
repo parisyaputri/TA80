@@ -1,9 +1,10 @@
 import numpy as np
 import pandas as pd
 
+from configs.model_config import ProcessConfig
 from models.digital_twin import DigitalTwin
 
-def learn_control_flow_profile(grouped, min_edge_support=0.05):
+def learn_control_flow_profile(grouped, min_edge_support=ProcessConfig.MIN_EDGE_SUPPORT):
     edge_counts = {}
     activity_case_counts = {}
     activity_repetitions = {}
@@ -39,11 +40,11 @@ def learn_control_flow_profile(grouped, min_edge_support=0.05):
     required_activities = {
         activity
         for activity, count in activity_case_counts.items()
-        if count / max(total_cases, 1) >= 0.60
+        if count / max(total_cases, 1) >= ProcessConfig.REQUIRED_ACTIVITY_RATIO
     }
 
     max_repetitions = {
-        activity: max(1, int(np.ceil(np.percentile(counts, 95))))
+        activity: max(1, int(np.ceil(np.percentile(counts, ProcessConfig.MAX_REPETITION_PERCENTILE))))
         for activity, counts in activity_repetitions.items()
     }
 
@@ -75,7 +76,7 @@ def learn_resource_profile(profile_df):
 
     for activity, counts in activity_resources.items():
         total = sum(counts.values())
-        min_count = max(1, int(np.ceil(total * 0.01)))
+        min_count = max(1, int(np.ceil(total * ProcessConfig.ALLOWED_RESOURCE_THRESHOLD)))
         allowed_by_activity[activity] = {
             resource
             for resource, count in counts.items()
@@ -215,9 +216,9 @@ def build_case_features(cleaned_df, cf_profile, resource_profile, case_states, l
             'cf_missing_steps': missing_steps,
             'cf_duplicate_steps': duplicate_steps,
             'cf_wrong_order_ratio': wrong_order_ratio,
-            'cf_has_appeal': int(any('appeal' in activity for activity in activities)),
-            'cf_has_penalty': int(any('penalty' in activity for activity in activities)),
-            'cf_has_payment': int(any('payment' in activity for activity in activities)),
+            'cf_has_appeal': int(any(any(kw in activity for kw in ProcessConfig.APPEAL_KEYWORDS) for activity in activities)),
+            'cf_has_penalty': int(any(any(kw in activity for kw in ProcessConfig.PENALTY_KEYWORDS) for activity in activities)),
+            'cf_has_payment': int(any(any(kw in activity for kw in ProcessConfig.PAYMENT_KEYWORDS) for activity in activities)),
             'temp_total_hrs': total_hrs,
             'temp_max_step_hrs': max_step_hrs,
             'temp_std_step_hrs': std_step_hrs,
@@ -228,13 +229,7 @@ def build_case_features(cleaned_df, cf_profile, resource_profile, case_states, l
                 max_resource_usage / max(len(resources), 1)
             ),
             'res_rpa_flag': int(any(
-                any(keyword in resource for keyword in [
-                    'bot',
-                    'robot',
-                    'system',
-                    'auto',
-                    'rpa'
-                ])
+                any(keyword in resource for keyword in ProcessConfig.RPA_KEYWORDS)
                 for resource in resources
             )),
             'res_unusual_activity_count': unusual_resource_events,

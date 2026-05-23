@@ -1,5 +1,7 @@
-DEFAULT_BASELINE_KEEP_FRACTION = 0.80
-DEFAULT_BASELINE_THRESHOLD_QUANTILE = 0.95
+from configs.model_config import IterativeBaselineConfig
+
+DEFAULT_BASELINE_KEEP_FRACTION = IterativeBaselineConfig.BASELINE_KEEP_FRACTION
+DEFAULT_BASELINE_THRESHOLD_QUANTILE = IterativeBaselineConfig.BASELINE_THRESHOLD_QUANTILE
 
 
 def select_stable_baseline_cases(
@@ -19,7 +21,7 @@ def select_stable_baseline_cases(
 
     if 'cf_has_payment' in ranked_df.columns:
         rank_score = rank_score - (
-            0.25 * ranked_df['cf_has_payment'].astype(float)
+            IterativeBaselineConfig.PAYMENT_WEIGHT * ranked_df['cf_has_payment'].astype(float)
         )
 
     if 'dt_execution_state' in ranked_df.columns:
@@ -30,7 +32,7 @@ def select_stable_baseline_cases(
             .eq('completed')
             .astype(float)
         )
-        rank_score = rank_score - (0.15 * completed)
+        rank_score = rank_score - (IterativeBaselineConfig.COMPLETED_WEIGHT * completed)
 
     if (
         'cf_has_penalty' in ranked_df.columns
@@ -40,7 +42,7 @@ def select_stable_baseline_cases(
             ranked_df['cf_has_penalty'].astype(float).eq(1)
             & ranked_df['cf_has_payment'].astype(float).eq(0)
         ).astype(float)
-        rank_score = rank_score + (0.35 * penalty_without_payment)
+        rank_score = rank_score + (IterativeBaselineConfig.PENALTY_NO_PAYMENT_WEIGHT * penalty_without_payment)
 
     if (
         'cf_has_appeal' in ranked_df.columns
@@ -50,7 +52,7 @@ def select_stable_baseline_cases(
             ranked_df['cf_has_appeal'].astype(float).eq(1)
             & ranked_df['cf_has_payment'].astype(float).eq(0)
         ).astype(float)
-        rank_score = rank_score + (0.20 * appeal_without_payment)
+        rank_score = rank_score + (IterativeBaselineConfig.APPEAL_NO_PAYMENT_WEIGHT * appeal_without_payment)
 
     ranked_df['_baseline_fit_score'] = rank_score
 

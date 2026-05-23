@@ -136,7 +136,7 @@ class DynamicDeclarativeConstraints:
                 violations.extend(col_violations)
 
                 if perspective in perspective_hits:
-                    severity = min(1.0, max(z / 3.0, len(col_violations) / 4.0))
+                    severity = min(1.0, max(z / self.z_threshold, len(col_violations) / DDCConfig.SEVERITY_VIOL_DIVISOR))
                     perspective_hits[perspective] += severity
 
         for col, rule in self.hard_rules.items():

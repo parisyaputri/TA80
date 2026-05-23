@@ -5,6 +5,7 @@ import pandas as pd
 
 from sklearn.metrics import roc_auc_score
 
+from configs.model_config import DDCConfig, IntelligentBodyConfig, ProcessConfig
 from utils.helpers import (
     _safe_float,
     _clip01
@@ -64,7 +65,7 @@ class IntelligentBody:
             except Exception:
                 auc = 0.5
 
-            raw_weights[col] = max(0.03, auc - 0.45)
+            raw_weights[col] = max(IntelligentBodyConfig.MIN_WEIGHT, auc - IntelligentBodyConfig.AUC_OFFSET)
 
         total = sum(raw_weights.values())
 
@@ -113,7 +114,7 @@ class IntelligentBody:
         if len(z_vals) == 0:
             z_vals = np.array([0.0])
 
-        z_composite = _clip01(float(np.mean(np.clip(z_vals / 3.0, 0, 1))))
+        z_composite = _clip01(float(np.mean(np.clip(z_vals / DDCConfig.SEVERITY_Z_DIVISOR, 0, 1))))
 
         row_df = pd.DataFrame([row])
         if '_pre_arm_score' in row.index:
@@ -183,10 +184,10 @@ class IntelligentBody:
 
         if total <= 1e-9:
             return {
-                'ddc_score': 0.30,
-                'z_score': 0.20,
-                'arm_score': 0.30,
-                'br_score': 0.20,
+                'ddc_score': IntelligentBodyConfig.DEFAULT_DDC_WEIGHT,
+                'z_score': IntelligentBodyConfig.DEFAULT_Z_WEIGHT,
+                'arm_score': IntelligentBodyConfig.DEFAULT_ARM_WEIGHT,
+                'br_score': IntelligentBodyConfig.DEFAULT_BR_WEIGHT,
             }
 
         return {
@@ -208,8 +209,8 @@ class IntelligentBody:
         self.all_scores.append(composite)
 
         if len(self.all_scores) >= 10:
-            high_threshold = float(np.percentile(self.all_scores, 90))
-            medium_threshold = float(np.percentile(self.all_scores, 70))
+            high_threshold = float(np.percentile(self.all_scores, IntelligentBodyConfig.RISK_HIGH_PERCENTILE))
+            medium_threshold = float(np.percentile(self.all_scores, IntelligentBodyConfig.RISK_MEDIUM_PERCENTILE))
         else:
             current_scores = self.all_scores if self.all_scores else [composite]
             high_threshold = float(np.max(current_scores))
@@ -227,7 +228,7 @@ class IntelligentBody:
         if scores['control_flow_score'] > 0 or _safe_float(row.get('cf_missing_steps', 0)) > 0:
             anomaly_types.append('Control-Flow')
 
-        if scores['temporal_score'] > 0 or scores['z_score'] > 0.35:
+        if scores['temporal_score'] > 0 or scores['z_score'] > IntelligentBodyConfig.TEMPORAL_ANOMALY_Z_THRESHOLD:
             anomaly_types.append('Temporal')
 
         if scores['resource_score'] > 0 or _safe_float(row.get('res_unusual_activity_count', 0)) > 0:
@@ -450,32 +451,29 @@ class IntelligentBody:
 
             arm_score = arm_df['arm_score']
 
-        br_rules = pd.concat([
+        cf_seq_violations = df['cf_seq_violations'] if 'cf_seq_violations' in df.columns else pd.Series(0.0, index=index)
+        cf_missing_steps = df['cf_missing_steps'] if 'cf_missing_steps' in df.columns else pd.Series(0.0, index=index)
+        cf_has_appeal = df['cf_has_appeal'] if 'cf_has_appeal' in df.columns else pd.Series(0.0, index=index)
+        cf_has_penalty = df['cf_has_penalty'] if 'cf_has_penalty' in df.columns else pd.Series(0.0, index=index)
+        cf_has_payment = df['cf_has_payment'] if 'cf_has_payment' in df.columns else pd.Series(0.0, index=index)
+        temp_total_hrs = df['temp_total_hrs'] if 'temp_total_hrs' in df.columns else pd.Series(0.0, index=index)
+        res_unusual_activity_count = df['res_unusual_activity_count'] if 'res_unusual_activity_count' in df.columns else pd.Series(0.0, index=index)
 
-            (df['cf_seq_violations'] > 1).astype(float),
+        br_list = [
+            (cf_seq_violations > 1).astype(float),
+            (cf_missing_steps > 0).astype(float),
+            ((cf_has_appeal == 1) & (cf_has_payment == 0)).astype(float),
+            ((cf_has_penalty == 1) & (cf_has_payment == 0)).astype(float)
+        ]
 
-            (df['cf_missing_steps'] > 0).astype(float),
+        if 'temp_total_hrs' in self.dt.baseline and 'p90' in self.dt.baseline['temp_total_hrs']:
+            br_list.append((temp_total_hrs > self.dt.baseline['temp_total_hrs']['p90']).astype(float))
+        else:
+            br_list.append(pd.Series(0.0, index=index))
 
-            (
-                (df['cf_has_appeal'] == 1) &
-                (df['cf_has_payment'] == 0)
-            ).astype(float),
+        br_list.append((res_unusual_activity_count > 0).astype(float))
 
-            (
-                (df['cf_has_penalty'] == 1) &
-                (df['cf_has_payment'] == 0)
-            ).astype(float),
-
-            (
-                df['temp_total_hrs'] >
-                self.dt.baseline['temp_total_hrs']['p90']
-            ).astype(float),
-
-            (
-                df['res_unusual_activity_count'] > 0
-            ).astype(float)
-
-        ], axis=1)
+        br_rules = pd.concat(br_list, axis=1)
 
         br_score = br_rules.mean(axis=1)
 
@@ -520,8 +518,8 @@ class IntelligentBody:
 
         composite = composite.clip(0, 1)
 
-        high_threshold = float(np.percentile(composite, 90))
-        medium_threshold = float(np.percentile(composite, 70))
+        high_threshold = float(np.percentile(composite, IntelligentBodyConfig.RISK_HIGH_PERCENTILE))
+        medium_threshold = float(np.percentile(composite, IntelligentBodyConfig.RISK_MEDIUM_PERCENTILE))
 
         risk_level = np.where(
             composite >= high_threshold,
@@ -539,7 +537,7 @@ class IntelligentBody:
             if df.loc[idx, 'cf_missing_steps'] > 0:
                 types.append('Control-Flow')
 
-            if z_score.loc[idx] > 0.35:
+            if z_score.loc[idx] > IntelligentBodyConfig.TEMPORAL_ANOMALY_Z_THRESHOLD:
                 types.append('Temporal')
 
             if df.loc[idx, 'res_unusual_activity_count'] > 0:
@@ -555,7 +553,7 @@ class IntelligentBody:
             if first_violation.loc[idx]:
                 parts.append(f"DDC violations: {first_violation.loc[idx]}")
 
-            if z_score.loc[idx] > 0.67:
+            if z_score.loc[idx] > IntelligentBodyConfig.EXPLANATION_HIGH_Z_THRESHOLD:
                 parts.append("High z-score evidence")
 
             explanations.append(

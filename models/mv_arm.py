@@ -227,9 +227,9 @@ class MVARMiner:
 
             views = self._views_for_items(antecedent | consequent)
             severity = (
-                0.50 * _safe_float(rule['confidence'])
-                + 0.30 * min(_safe_float(rule['lift']) / 3.0, 1.0)
-                + 0.20 * min(_safe_float(rule['support']) / max(self.min_support, 1e-9), 1.0)
+                ARMConfig.CONFIDENCE_WEIGHT * _safe_float(rule['confidence'])
+                + ARMConfig.LIFT_WEIGHT * min(_safe_float(rule['lift']) / ARMConfig.LIFT_NORM_DIVISOR, 1.0)
+                + ARMConfig.SUPPORT_WEIGHT * min(_safe_float(rule['support']) / max(self.min_support, 1e-9), 1.0)
             )
 
             triggered.append({
@@ -329,9 +329,9 @@ class MVARMiner:
                     continue
 
                 severity = (
-                    0.50 * _safe_float(rule['confidence'])
-                    + 0.30 * min(_safe_float(rule['lift']) / 3.0, 1.0)
-                    + 0.20 * min(_safe_float(rule['support']) / max(self.min_support, 1e-9), 1.0)
+                    ARMConfig.CONFIDENCE_WEIGHT * _safe_float(rule['confidence'])
+                    + ARMConfig.LIFT_WEIGHT * min(_safe_float(rule['lift']) / ARMConfig.LIFT_NORM_DIVISOR, 1.0)
+                    + ARMConfig.SUPPORT_WEIGHT * min(_safe_float(rule['support']) / max(self.min_support, 1e-9), 1.0)
                 )
                 severity = _clip01(severity)
 

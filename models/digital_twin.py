@@ -1,6 +1,7 @@
 import numpy as np
 import pandas as pd
 
+from configs.model_config import ProcessConfig
 from utils.helpers import (
     _safe_float,
     _clip01
@@ -92,7 +93,7 @@ class DigitalTwin:
         state['activity_history'].append(activity)
 
         lowered = activity.lower()
-        if any(token in lowered for token in ['payment', 'archive', 'close']):
+        if any(token in lowered for token in ProcessConfig.COMPLETION_KEYWORDS):
             state['execution_state'] = 'completed'
 
         return state

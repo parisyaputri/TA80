@@ -6,6 +6,7 @@ from utils.thresholding import (
     choose_detection_threshold
 )
 
+from configs.model_config import DDCConfig, IntelligentBodyConfig
 from models.lstm_baseline import LSTMBaseline
 from models.transformer_baseline import TransformerBaseline
 
@@ -15,10 +16,10 @@ def add_lightweight_baselines(final_df, mv_arm, calibration_mask=None):
         (final_df['cf_seq_violations'] > 0).astype(float)
         + (final_df['cf_missing_steps'] > 0).astype(float)
         + (final_df['cf_duplicate_steps'] > 0).astype(float)
-    ) / 3.0
+    ) / DDCConfig.SEVERITY_Z_DIVISOR
     static_components['temporal'] = (
         final_df['temp_total_hrs']
-        > final_df['temp_total_hrs'].quantile(0.90)
+        > final_df['temp_total_hrs'].quantile(IntelligentBodyConfig.RISK_HIGH_PERCENTILE / 100.0)
     ).astype(float)
     static_components['resource'] = (
         final_df['res_unusual_activity_count'] > 0
