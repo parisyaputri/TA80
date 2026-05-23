@@ -1,6 +1,9 @@
 import numpy as np
 from sklearn.metrics import roc_curve
 
+NO_POSITIVE_GAIN_SUFFIX = 'no_positive_gain'
+
+
 def choose_detection_threshold(final_df, score_col='anomaly_score'):
     scores = final_df[score_col].astype(float)
 
@@ -17,13 +20,21 @@ def choose_detection_threshold(final_df, score_col='anomaly_score'):
 
         if not finite_mask.any():
             best_threshold = float(scores.min())
+            method_suffix = 'roc_youden_j'
         else:
             finite_thresholds = thresholds[finite_mask]
             finite_youden_j = youden_j[finite_mask]
             best_index = int(np.argmax(finite_youden_j))
-            best_threshold = float(finite_thresholds[best_index])
+            best_youden_j = float(finite_youden_j[best_index])
 
-        return round(best_threshold, 4), f'{score_col}_roc_youden_j'
+            if best_youden_j <= 0:
+                best_threshold = float(scores.max())
+                method_suffix = f'roc_youden_j_{NO_POSITIVE_GAIN_SUFFIX}'
+            else:
+                best_threshold = float(finite_thresholds[best_index])
+                method_suffix = 'roc_youden_j'
+
+        return round(best_threshold, 4), f'{score_col}_{method_suffix}'
 
     unique_scores = np.sort(scores.unique())
 
@@ -53,4 +64,24 @@ def choose_detection_threshold(final_df, score_col='anomaly_score'):
             best_threshold = float(threshold)
 
     return round(best_threshold, 4), f'{score_col}_score_distribution_otsu'
+
+
+def apply_detection_threshold(
+    df,
+    score_col,
+    threshold,
+    threshold_method
+):
+    if str(threshold_method).endswith(NO_POSITIVE_GAIN_SUFFIX):
+        return np.full(
+            len(df),
+            'regular',
+            dtype=object
+        )
+
+    return np.where(
+        df[score_col].astype(float) >= threshold,
+        'deviant',
+        'regular'
+    )
 

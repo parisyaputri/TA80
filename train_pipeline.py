@@ -20,6 +20,7 @@ from utils.feature_engineering import (
 )
 
 from utils.thresholding import (
+    apply_detection_threshold,
     choose_detection_threshold
 )
 
@@ -46,6 +47,12 @@ from configs.paths import (
 
 from utils.evaluation import (
     evaluate_model
+)
+
+from utils.evaluation_split import (
+    build_threshold_evaluation_split,
+    evaluation_scope,
+    threshold_scope
 )
 
 MODEL_DIR.mkdir(
@@ -257,9 +264,19 @@ def train_and_detect(csv_path):
     # THRESHOLDING
     # =====================================================
 
+    calibration_mask, test_mask, has_holdout_test = (
+        build_threshold_evaluation_split(
+            final_df
+        )
+    )
+
+    threshold_df = final_df.loc[
+        calibration_mask
+    ]
+
     threshold, threshold_method = (
         choose_detection_threshold(
-            final_df
+            threshold_df
         )
     )
 
@@ -269,10 +286,17 @@ def train_and_detect(csv_path):
         threshold_method
     )
 
-    final_df['predicted_label'] = np.where(
-        final_df['anomaly_score'] >= threshold,
-        'deviant',
-        'regular'
+    current_threshold_scope = threshold_scope(
+        has_holdout_test
+    )
+
+    final_df['threshold_scope'] = current_threshold_scope
+
+    final_df['predicted_label'] = apply_detection_threshold(
+        final_df,
+        'anomaly_score',
+        threshold,
+        threshold_method
     )
 
     if 'risk_level' not in final_df.columns:
@@ -284,23 +308,30 @@ def train_and_detect(csv_path):
 
     final_df = add_lightweight_baselines(
         final_df,
-        mv_arm
+        mv_arm,
+        calibration_mask=calibration_mask
     )
-    
-    print(final_df.columns.tolist())
-    
+
     # =====================================================
     # EVALUATION
     # =====================================================
 
     metrics = None
+    wilcoxon_stat = None
+    p_value = None
+    cohens_d = None
+    corrected_p = None
+
+    evaluation_df = final_df.loc[
+        test_mask
+    ]
 
     if 'label' in final_df.columns:
 
         metrics = evaluate_model(
-            y_true=final_df['label'],
-            y_pred=final_df['predicted_label'],
-            y_scores=final_df['anomaly_score']
+            y_true=evaluation_df['label'],
+            y_pred=evaluation_df['predicted_label'],
+            y_scores=evaluation_df['anomaly_score']
         )
         
         # =====================================================
@@ -313,11 +344,11 @@ def train_and_detect(csv_path):
         ):
 
             baseline_scores = (
-                final_df['single_arm_score']
+                evaluation_df['single_arm_score']
             )
 
             proposed_scores = (
-                final_df['anomaly_score']
+                evaluation_df['anomaly_score']
             )
 
             wilcoxon_stat, p_value = (
@@ -374,12 +405,18 @@ def train_and_detect(csv_path):
             f"{dataset_name}_eval.txt"
         )
 
+        current_evaluation_scope = (
+            evaluation_scope(
+                has_holdout_test
+            )
+        )
+
         evaluations = [
             {
-                'title': 'DT-IB ADAPTIVE MODEL',
-                'y_true': final_df['label'],
-                'y_pred': final_df['predicted_label'],
-                'y_scores': final_df['anomaly_score'],
+                'title': f'DT-IB ADAPTIVE MODEL ({current_evaluation_scope})',
+                'y_true': evaluation_df['label'],
+                'y_pred': evaluation_df['predicted_label'],
+                'y_scores': evaluation_df['anomaly_score'],
                 'statistical_testing': {
                     'wilcoxon': wilcoxon_stat,
                     'p_value': p_value,
@@ -388,16 +425,16 @@ def train_and_detect(csv_path):
                 }
             },
             {
-                'title': 'BASELINE: STATIC DC',
-                'y_true': final_df['label'],
-                'y_pred': final_df['static_dc_predicted_label'],
-                'y_scores': final_df['static_dc_score']
+                'title': f'BASELINE: STATIC DC ({current_evaluation_scope})',
+                'y_true': evaluation_df['label'],
+                'y_pred': evaluation_df['static_dc_predicted_label'],
+                'y_scores': evaluation_df['static_dc_score']
             },
             {
-                'title': 'BASELINE: SINGLE-VIEW ARM',
-                'y_true': final_df['label'],
-                'y_pred': final_df['single_arm_predicted_label'],
-                'y_scores': final_df['single_arm_score']
+                'title': f'BASELINE: SINGLE-VIEW ARM ({current_evaluation_scope})',
+                'y_true': evaluation_df['label'],
+                'y_pred': evaluation_df['single_arm_predicted_label'],
+                'y_scores': evaluation_df['single_arm_score']
             }
         ]
 
@@ -418,6 +455,9 @@ def train_and_detect(csv_path):
         'control_flow_profile': cf_profile,
         'resource_profile': resource_profile,
         'numeric_cols': numeric_cols,
+        'threshold': threshold,
+        'threshold_method': threshold_method,
+        'threshold_scope': current_threshold_scope,
     }
 
     output_path = save_outputs(
@@ -448,5 +488,8 @@ def train_and_detect(csv_path):
         'normal_count': normal_count,
         'threshold': threshold,
         'threshold_method': threshold_method,
+        'threshold_scope': current_threshold_scope,
+        'calibration_rows': int(calibration_mask.sum()),
+        'evaluation_rows': int(test_mask.sum()),
         'result_file': str(output_path.name)
     }

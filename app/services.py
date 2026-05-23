@@ -346,5 +346,17 @@ def build_summary(
                     'unknown'
                 ),
                 'unknown'
+            ),
+
+        'threshold_scope':
+            clean_text(
+                df['threshold_scope'].iloc[0]
+                if 'threshold_scope' in df.columns
+                and len(df) > 0
+                else result.get(
+                    'threshold_scope',
+                    'unknown'
+                ),
+                'unknown'
             )
     }

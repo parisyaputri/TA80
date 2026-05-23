@@ -49,7 +49,7 @@ The system uses an adaptive weighted scoring mechanism where anomaly components 
 * Upload CSV event log datasets
 * Automatic separator detection (`;` or `,`)
 * Adaptive anomaly scoring
-* Dynamic thresholding
+* ROC-Youden threshold optimization
 * Risk level classification
 * Evaluation metrics generation
 * Export prediction results as CSV
@@ -255,8 +255,30 @@ The uploaded dataset passes through:
 5. Resource analysis
 6. MV-ARM mining
 7. Adaptive score fusion
-8. Thresholding
+8. Threshold optimization
 9. Prediction generation
+
+---
+
+## Threshold Optimization
+
+When ground-truth labels are available, the system splits case-level
+results into deterministic calibration and holdout-test subsets based
+on the uploaded data distribution.
+
+* Threshold calibration uses ROC analysis and Youden's J statistic:
+  `J = TPR - FPR`.
+* The selected threshold is applied to all cases.
+* Reported evaluation metrics use only the holdout-test subset, so the
+  threshold is not optimized and evaluated on the exact same cases.
+* The calibration/evaluation split is stratified by label and ordered
+  from data-derived case keys, so it does not depend on a fixed random
+  seed or hardcoded split ratio.
+* If labels are unavailable, the system falls back to an unsupervised
+  score-distribution threshold.
+* If a score has no positive Youden gain on the calibration subset, the
+  system marks the threshold method as `roc_youden_j_no_positive_gain`
+  and avoids classifying every case as anomalous.
 
 ---
 
@@ -274,7 +296,7 @@ Main responsibilities:
 * Build case-level features
 * Generate anomaly scores
 * Apply adaptive weighting
-* Calculate thresholds
+* Calculate ROC-Youden thresholds on calibration data
 * Generate predictions
 * Save outputs
 
@@ -295,10 +317,12 @@ Contains:
 * Case ID
 * Actual label
 * Predicted label
+* Evaluation split
 * Anomaly score
 * Risk level
 * DDC score
 * ARM score
+* Threshold method
 * Business rule score
 * Explanations
 
