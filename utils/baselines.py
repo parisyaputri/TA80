@@ -36,8 +36,13 @@ def add_lightweight_baselines(final_df, mv_arm, calibration_mask=None):
     if calibration_mask is not None:
         threshold_df = final_df.loc[calibration_mask]
 
+    threshold_features = threshold_df.drop(
+        columns=['label'],
+        errors='ignore'
+    )
+
     static_threshold, static_threshold_method = choose_detection_threshold(
-        threshold_df,
+        threshold_features,
         'static_dc_score'
     )
 
@@ -47,12 +52,10 @@ def add_lightweight_baselines(final_df, mv_arm, calibration_mask=None):
     ]
 
     if (
-        'label' in threshold_df.columns
-        and threshold_df['label'].isin(['regular', 'deviant']).all()
-        and threshold_df['label'].nunique() == 2
+        'single_arm_score' in threshold_features.columns
     ):
         arm_threshold, arm_threshold_method = choose_detection_threshold(
-            threshold_df,
+            threshold_features,
             'single_arm_score'
         )
     else:

@@ -1,0 +1,2 @@
+dataset,n_splits,random_state,total_cases,regular_cases,deviant_cases,mean_accuracy,std_accuracy,min_accuracy,max_accuracy,best_fold,mean_f1,mean_auc_roc,mean_auc_pr
+traffic_fines_1.csv,5,42,129615,70602,59013,0.45176869961038457,0.0022046321041632147,0.44960074065501676,0.45523280484511824,1,0.11708855219925322,0.36164216833390583,0.38477000239606163

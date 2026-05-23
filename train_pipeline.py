@@ -50,6 +50,7 @@ from utils.evaluation import (
 )
 
 from utils.evaluation_split import (
+    build_case_train_evaluation_split,
     build_threshold_evaluation_split,
     evaluation_scope,
     threshold_scope
@@ -87,26 +88,26 @@ def train_and_detect(csv_path):
         columns
     )
 
+    train_event_mask, _, _ = build_case_train_evaluation_split(
+        cleaned_df,
+        case_col='_case_id_norm'
+    )
+
+    train_events = cleaned_df.loc[
+        train_event_mask
+    ].copy()
+
+    train_case_ids = set(
+        train_events['_case_id_norm']
+        .astype(str)
+        .unique()
+    )
+
     # =====================================================
     # PROFILE LEARNING
     # =====================================================
 
-    profile_df = cleaned_df
-
-    if label_col is not None:
-
-        labels_for_profile = (
-            cleaned_df[label_col]
-            .astype(str)
-            .str.lower()
-        )
-
-        regular_df = cleaned_df[
-            labels_for_profile == 'regular'
-        ]
-
-        if not regular_df.empty:
-            profile_df = regular_df
+    profile_df = train_events
 
     profile_grouped = profile_df.groupby(
         '_case_id_norm',
@@ -138,15 +139,16 @@ def train_and_detect(csv_path):
     )
 
     train_feature_df = feature_df
+    train_feature_df = feature_df[
+        feature_df['case_id']
+        .astype(str)
+        .isin(train_case_ids)
+    ].copy()
 
-    if 'label' in feature_df.columns:
-
-        regular_feature_df = feature_df[
-            feature_df['label'] == 'regular'
-        ]
-
-        if not regular_feature_df.empty:
-            train_feature_df = regular_feature_df
+    train_feature_for_learning = train_feature_df.drop(
+        columns=['label'],
+        errors='ignore'
+    )
 
     # =====================================================
     # NUMERIC FEATURES
@@ -180,7 +182,7 @@ def train_and_detect(csv_path):
     dt = DigitalTwin()
 
     dt.fit(
-        train_feature_df,
+        train_feature_for_learning,
         numeric_cols
     )
 
@@ -198,7 +200,7 @@ def train_and_detect(csv_path):
     mv_arm = MVARMiner()
 
     mv_arm.fit(
-        train_feature_df
+        train_feature_for_learning
     )
 
     ib = IntelligentBody(
@@ -208,7 +210,7 @@ def train_and_detect(csv_path):
     )
 
     ib.calibrate_weights(
-        feature_df,
+        train_feature_for_learning,
         numeric_cols
     )
 
@@ -272,7 +274,10 @@ def train_and_detect(csv_path):
 
     threshold_df = final_df.loc[
         calibration_mask
-    ]
+    ].drop(
+        columns=['label'],
+        errors='ignore'
+    )
 
     threshold, threshold_method = (
         choose_detection_threshold(
