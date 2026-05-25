@@ -14,6 +14,7 @@ from sklearn.metrics import (
 )
 from sklearn.model_selection import StratifiedKFold
 
+from configs.model_config import IntelligentBodyConfig
 from models.ddc import DynamicDeclarativeConstraints
 from models.digital_twin import DigitalTwin
 from models.intelligent_body import IntelligentBody
@@ -144,6 +145,7 @@ def _fit_fold_model(
     ddc.fit(
         dt,
         NUMERIC_COLS,
+        train_df=learning_features,
         cf_profile=cf_profile,
         resource_profile=resource_profile,
     )
@@ -152,7 +154,7 @@ def _fit_fold_model(
     mv_arm.fit(model_train_df)
 
     ib = IntelligentBody(dt, ddc, mv_arm)
-    ib.calibrate_weights(model_train_df, NUMERIC_COLS)
+    ib.calibrate_weights(train_features, NUMERIC_COLS)
 
     return ib, mv_arm
 
@@ -165,7 +167,7 @@ def _score_features(features, ib, mv_arm):
     scoring_df['_pre_arm_rules_hit'] = precomputed_arm['arm_rules_hit']
     scoring_df['_pre_violated_arm_rules'] = precomputed_arm['violated_arm_rules']
 
-    if len(scoring_df) > 10000:
+    if len(scoring_df) > IntelligentBodyConfig.FAST_SCORING_THRESHOLD:
         result_df = ib.score_all_fast(scoring_df)
     else:
         result_df = ib.score_all(scoring_df)

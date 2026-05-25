@@ -30,6 +30,7 @@ class DynamicDeclarativeConstraints:
         self,
         digital_twin,
         numeric_cols,
+        train_df=None,
         cf_profile=None,
         resource_profile=None
     ):
@@ -56,11 +57,23 @@ class DynamicDeclarativeConstraints:
                 'upper': float(percentiles[-2]),
             }
 
+        if train_df is not None:
+            # Data-driven bounds: 95th percentile on normal baseline cases
+            missing_max = int(np.ceil(train_df['cf_missing_steps'].quantile(0.95))) if 'cf_missing_steps' in train_df.columns else DDCConfig.ALLOWED_MISSING_STEPS_MAX
+            dup_max = int(np.ceil(train_df['cf_duplicate_steps'].quantile(0.95))) if 'cf_duplicate_steps' in train_df.columns else DDCConfig.ALLOWED_DUPLICATE_STEPS_MAX
+            seq_max = int(np.ceil(train_df['cf_seq_violations'].quantile(0.95))) if 'cf_seq_violations' in train_df.columns else DDCConfig.ALLOWED_SEQ_VIOLATIONS_MAX
+            res_max = int(np.ceil(train_df['res_unusual_activity_count'].quantile(0.95))) if 'res_unusual_activity_count' in train_df.columns else DDCConfig.ALLOWED_UNUSUAL_RESOURCE_EVENTS_MAX
+        else:
+            missing_max = DDCConfig.ALLOWED_MISSING_STEPS_MAX
+            dup_max = DDCConfig.ALLOWED_DUPLICATE_STEPS_MAX
+            seq_max = DDCConfig.ALLOWED_SEQ_VIOLATIONS_MAX
+            res_max = DDCConfig.ALLOWED_UNUSUAL_RESOURCE_EVENTS_MAX
+
         self.hard_rules = {
-            'cf_missing_steps': (0, 0, 'Control-Flow'),
-            'cf_duplicate_steps': (0, 2, 'Control-Flow'),
-            'cf_seq_violations': (0, 1, 'Control-Flow'),
-            'res_unusual_activity_count': (0, 0, 'Resource'),
+            'cf_missing_steps': (0, missing_max, 'Control-Flow'),
+            'cf_duplicate_steps': (0, dup_max, 'Control-Flow'),
+            'cf_seq_violations': (0, seq_max, 'Control-Flow'),
+            'res_unusual_activity_count': (0, res_max, 'Resource'),
         }
 
         return self

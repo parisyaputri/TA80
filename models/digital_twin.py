@@ -1,7 +1,7 @@
 import numpy as np
 import pandas as pd
 
-from configs.model_config import ProcessConfig
+from configs.model_config import ProcessConfig, DDCConfig
 from utils.helpers import (
     _safe_float,
     _clip01
@@ -10,7 +10,7 @@ from utils.helpers import (
 class DigitalTwin:
     """Virtual process representation with adaptive numeric baselines."""
 
-    def __init__(self, ewma_alpha=0.20):
+    def __init__(self, ewma_alpha=DDCConfig.EWMA_ALPHA):
         self.baseline = {}
         self.percentiles = {}
         self.ewma_thresholds = {}

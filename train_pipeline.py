@@ -6,6 +6,7 @@ from models.digital_twin import DigitalTwin
 from models.ddc import DynamicDeclarativeConstraints
 from models.mv_arm import MVARMiner
 from models.intelligent_body import IntelligentBody
+from configs.model_config import IntelligentBodyConfig
 
 from utils.preprocessing import (
     detect_event_log_columns,
@@ -176,6 +177,7 @@ def train_and_detect(csv_path):
     ddc.fit(
         dt,
         numeric_cols,
+        train_df=feature_df,
         cf_profile=cf_profile,
         resource_profile=resource_profile
     )
@@ -193,7 +195,7 @@ def train_and_detect(csv_path):
     )
 
     ib.calibrate_weights(
-        feature_for_learning,
+        feature_df,
         numeric_cols
     )
 
@@ -215,7 +217,7 @@ def train_and_detect(csv_path):
         precomputed_arm['violated_arm_rules']
     )
 
-    if len(scoring_df) > 10000:
+    if len(scoring_df) > IntelligentBodyConfig.FAST_SCORING_THRESHOLD:
 
         initial_result_df = ib.score_all_fast(
             scoring_df
@@ -297,6 +299,7 @@ def train_and_detect(csv_path):
     ddc.fit(
         dt,
         numeric_cols,
+        train_df=baseline_feature_df,
         cf_profile=cf_profile,
         resource_profile=resource_profile
     )
@@ -314,7 +317,7 @@ def train_and_detect(csv_path):
     )
 
     ib.calibrate_weights(
-        baseline_feature_df,
+        feature_df,
         numeric_cols
     )
 
@@ -336,7 +339,7 @@ def train_and_detect(csv_path):
         precomputed_arm['violated_arm_rules']
     )
 
-    if len(scoring_df) > 10000:
+    if len(scoring_df) > IntelligentBodyConfig.FAST_SCORING_THRESHOLD:
 
         result_df = ib.score_all_fast(
             scoring_df

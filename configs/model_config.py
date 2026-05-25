@@ -10,12 +10,22 @@ class DDCConfig:
     SEVERITY_Z_DIVISOR = 3.0
     SEVERITY_VIOL_DIVISOR = 4.0
 
+    # Hard rules bounds
+    ALLOWED_MISSING_STEPS_MAX = 0
+    ALLOWED_DUPLICATE_STEPS_MAX = 2
+    ALLOWED_SEQ_VIOLATIONS_MAX = 1
+    ALLOWED_UNUSUAL_RESOURCE_EVENTS_MAX = 0
+
+    # EWMA settings
+    EWMA_ALPHA = 0.20
+
+
 
 class ARMConfig:
     # Association Rule Mining parameters
     MIN_SUPPORT = 0.06
     MIN_CONFIDENCE = 0.65
-    MIN_LIFT = 1.0
+    MIN_LIFT = 1.05
     MAX_RULES = 40
     
     # Severity weighting for ARM rule hits
@@ -44,6 +54,18 @@ class IntelligentBodyConfig:
     TEMPORAL_ANOMALY_Z_THRESHOLD = 0.35
     EXPLANATION_HIGH_Z_THRESHOLD = 0.67
 
+    # Business rule verification thresholds
+    BR_SEQ_VIOLATIONS_MAX = 1
+    BR_MISSING_STEPS_MAX = 0
+    BR_UNUSUAL_RESOURCE_EVENTS_MAX = 0
+    BR_TEMP_TOTAL_QUANTILE = 'p90'
+
+    # Sampling and scoring thresholds
+    MAX_CALIBRATION_SAMPLES = 2500
+    FAST_SCORING_THRESHOLD = 10000
+
+
+
 
 class IterativeBaselineConfig:
     # Iterative baseline split thresholds
@@ -60,7 +82,7 @@ class IterativeBaselineConfig:
 class ProcessConfig:
     # Profile learning thresholds
     MIN_EDGE_SUPPORT = 0.05
-    REQUIRED_ACTIVITY_RATIO = 0.60
+    REQUIRED_ACTIVITY_RATIO = 0.85
     MAX_REPETITION_PERCENTILE = 95
     ALLOWED_RESOURCE_THRESHOLD = 0.01
 

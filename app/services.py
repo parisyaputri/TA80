@@ -1,4 +1,5 @@
 import pandas as pd
+from utils.evaluation import evaluate_model
 
 def clean_text(value, default=''):
 
@@ -68,6 +69,8 @@ def run_evaluations(
         if 'anomaly_score' in df.columns
         else None
     )
+
+    evaluate_model(y_true, y_pred, y_scores)
 
 def format_results(df):
 

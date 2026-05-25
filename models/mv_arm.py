@@ -1,5 +1,8 @@
 import numpy as np
 import pandas as pd
+import warnings
+warnings.filterwarnings('ignore', category=RuntimeWarning, module='mlxtend')
+
 from configs.model_config import ARMConfig
 
 from mlxtend.frequent_patterns import (

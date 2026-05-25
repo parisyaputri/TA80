@@ -1,0 +1,2 @@
+dataset,n_splits,random_state,total_cases,regular_cases,deviant_cases,mean_accuracy,std_accuracy,min_accuracy,max_accuracy,best_fold,mean_f1,mean_auc_roc,mean_auc_pr,mean_stable_baseline_cases
+synthetic_loan_process.csv,5,42,2000,1800,200,0.994,0.0037914377220257677,0.99,1.0,3,0.9702765752765753,0.9994861111111112,0.9948534874532541,1280.0

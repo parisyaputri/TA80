@@ -21,23 +21,25 @@ class IntelligentBody:
         self.all_scores = []
         self.component_weights = None
         self.numeric_cols = []
+        self.meta_model = None
 
     def calibrate_weights(self, df, numeric_cols):
         self.numeric_cols = numeric_cols
 
         if 'label' not in df.columns or df['label'].nunique() != 2:
+            self.meta_model = None
             self.component_weights = None
             return
 
         calibration_df = df
 
-        if len(df) > 5000:
+        if len(df) > (2 * IntelligentBodyConfig.MAX_CALIBRATION_SAMPLES):
             calibration_parts = []
 
             for _, group in df.groupby('label'):
                 calibration_parts.append(
                     group.sample(
-                        min(len(group), 2500),
+                        min(len(group), IntelligentBodyConfig.MAX_CALIBRATION_SAMPLES),
                         random_state=42
                     )
                 )
@@ -54,6 +56,14 @@ class IntelligentBody:
         ]
 
         component_df = pd.DataFrame(component_rows)
+        
+        # Fit a mathematically optimal logistic regression classifier to learn weights dynamically (zero magic numbers)
+        from sklearn.linear_model import LogisticRegression
+        X_train_meta = component_df[['ddc_score', 'z_score', 'arm_score', 'br_score']]
+        self.meta_model = LogisticRegression(class_weight='balanced', random_state=42)
+        self.meta_model.fit(X_train_meta, y_true)
+        
+        # Also compute heuristic weights for backward compatibility or cases where probabilities aren't used
         raw_weights = {}
 
         for col in ['ddc_score', 'z_score', 'arm_score', 'br_score']:
@@ -69,14 +79,11 @@ class IntelligentBody:
 
         total = sum(raw_weights.values())
 
-        if total <= 0:
-            self.component_weights = None
-            return
-
-        self.component_weights = {
-            key: value / total
-            for key, value in raw_weights.items()
-        }
+        if total > 0:
+            self.component_weights = {
+                key: value / total
+                for key, value in raw_weights.items()
+            }
 
     def _component_scores(self, row):
         ddc_viols, z_scores, perspective_scores = self.ddc.evaluate(row)
@@ -136,8 +143,8 @@ class IntelligentBody:
             arm_score = self.mva.score_hits(triggered)
 
         business_rules = [
-            _safe_float(row.get('cf_seq_violations', 0)) > 1,
-            _safe_float(row.get('cf_missing_steps', 0)) > 0,
+            _safe_float(row.get('cf_seq_violations', 0)) > IntelligentBodyConfig.BR_SEQ_VIOLATIONS_MAX,
+            _safe_float(row.get('cf_missing_steps', 0)) > IntelligentBodyConfig.BR_MISSING_STEPS_MAX,
             (
                 _safe_float(row.get('cf_has_appeal', 0)) == 1
                 and _safe_float(row.get('cf_has_payment', 0)) == 0
@@ -148,9 +155,9 @@ class IntelligentBody:
             ),
             (
                 _safe_float(row.get('temp_total_hrs', 0))
-                > self.dt.baseline['temp_total_hrs']['p90']
+                > self.dt.baseline['temp_total_hrs'][IntelligentBodyConfig.BR_TEMP_TOTAL_QUANTILE]
             ),
-            _safe_float(row.get('res_unusual_activity_count', 0)) > 0,
+            _safe_float(row.get('res_unusual_activity_count', 0)) > IntelligentBodyConfig.BR_UNUSUAL_RESOURCE_EVENTS_MAX,
         ]
 
         br_score = _clip01(sum(business_rules) / max(len(business_rules), 1))
@@ -199,12 +206,22 @@ class IntelligentBody:
         scores = self._component_scores(row)
         weights = self._fusion_weights(scores)
 
-        composite = _clip01(
-            scores['ddc_score'] * weights['ddc_score']
-            + scores['z_score'] * weights['z_score']
-            + scores['arm_score'] * weights['arm_score']
-            + scores['br_score'] * weights['br_score']
-        )
+        if hasattr(self, 'meta_model') and self.meta_model is not None:
+            # Predict probability using meta model
+            X_input = pd.DataFrame([[
+                scores['ddc_score'],
+                scores['z_score'],
+                scores['arm_score'],
+                scores['br_score']
+            ]], columns=['ddc_score', 'z_score', 'arm_score', 'br_score'])
+            composite = float(self.meta_model.predict_proba(X_input)[0, 1])
+        else:
+            composite = _clip01(
+                scores['ddc_score'] * weights['ddc_score']
+                + scores['z_score'] * weights['z_score']
+                + scores['arm_score'] * weights['arm_score']
+                + scores['br_score'] * weights['br_score']
+            )
 
         self.all_scores.append(composite)
 
@@ -460,34 +477,39 @@ class IntelligentBody:
         res_unusual_activity_count = df['res_unusual_activity_count'] if 'res_unusual_activity_count' in df.columns else pd.Series(0.0, index=index)
 
         br_list = [
-            (cf_seq_violations > 1).astype(float),
-            (cf_missing_steps > 0).astype(float),
+            (cf_seq_violations > IntelligentBodyConfig.BR_SEQ_VIOLATIONS_MAX).astype(float),
+            (cf_missing_steps > IntelligentBodyConfig.BR_MISSING_STEPS_MAX).astype(float),
             ((cf_has_appeal == 1) & (cf_has_payment == 0)).astype(float),
             ((cf_has_penalty == 1) & (cf_has_payment == 0)).astype(float)
         ]
 
-        if 'temp_total_hrs' in self.dt.baseline and 'p90' in self.dt.baseline['temp_total_hrs']:
-            br_list.append((temp_total_hrs > self.dt.baseline['temp_total_hrs']['p90']).astype(float))
+        if 'temp_total_hrs' in self.dt.baseline and IntelligentBodyConfig.BR_TEMP_TOTAL_QUANTILE in self.dt.baseline['temp_total_hrs']:
+            br_list.append((temp_total_hrs > self.dt.baseline['temp_total_hrs'][IntelligentBodyConfig.BR_TEMP_TOTAL_QUANTILE]).astype(float))
         else:
             br_list.append(pd.Series(0.0, index=index))
 
-        br_list.append((res_unusual_activity_count > 0).astype(float))
+        br_list.append((res_unusual_activity_count > IntelligentBodyConfig.BR_UNUSUAL_RESOURCE_EVENTS_MAX).astype(float))
 
         br_rules = pd.concat(br_list, axis=1)
 
         br_score = br_rules.mean(axis=1)
 
-        if self.component_weights is not None:
-
+        if hasattr(self, 'meta_model') and self.meta_model is not None:
+            features_df = pd.DataFrame({
+                'ddc_score': ddc_score,
+                'z_score': z_score,
+                'arm_score': arm_score,
+                'br_score': br_score
+            })
+            composite = pd.Series(self.meta_model.predict_proba(features_df)[:, 1], index=index)
+        elif self.component_weights is not None:
             w = self.component_weights
-
             composite = (
                 ddc_score * w['ddc_score'] +
                 z_score * w['z_score'] +
                 arm_score * w['arm_score'] +
                 br_score * w['br_score']
             )
-
         else:
 
             score_sum = (
@@ -503,10 +525,10 @@ class IntelligentBody:
                 'arm_score': arm_score / score_sum,
                 'br_score': br_score / score_sum,
             }).fillna({
-                'ddc_score': 0.30,
-                'z_score': 0.20,
-                'arm_score': 0.30,
-                'br_score': 0.20,
+                'ddc_score': IntelligentBodyConfig.DEFAULT_DDC_WEIGHT,
+                'z_score': IntelligentBodyConfig.DEFAULT_Z_WEIGHT,
+                'arm_score': IntelligentBodyConfig.DEFAULT_ARM_WEIGHT,
+                'br_score': IntelligentBodyConfig.DEFAULT_BR_WEIGHT,
             })
 
             composite = (

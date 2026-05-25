@@ -13,31 +13,38 @@ def choose_detection_threshold(final_df, score_col='anomaly_score'):
         and final_df['label'].nunique() == 2
     ):
         y_true = final_df['label'].eq('deviant').astype(int)
-        fpr, tpr, thresholds = roc_curve(y_true, scores)
-        youden_j = tpr - fpr
-
-        finite_mask = np.isfinite(thresholds)
-
-        if not finite_mask.any():
-            best_threshold = float(scores.min())
-            method_suffix = 'roc_youden_j'
-        else:
-            finite_thresholds = thresholds[finite_mask]
-            finite_youden_j = youden_j[finite_mask]
-            best_index = int(np.argmax(finite_youden_j))
-            best_youden_j = float(finite_youden_j[best_index])
-
-            if best_youden_j <= 0:
+        
+        from sklearn.metrics import precision_recall_curve
+        precision, recall, thresholds = precision_recall_curve(y_true, scores)
+        
+        # Calculate F1 score for each threshold
+        denom = precision + recall
+        f1_scores = np.divide(
+            2 * precision * recall,
+            denom,
+            out=np.zeros_like(denom),
+            where=denom > 0
+        )
+        
+        # Slice to match the length of thresholds (precision/recall have N+1 elements)
+        f1_scores = f1_scores[:len(thresholds)]
+        
+        if len(thresholds) > 0:
+            best_idx = int(np.argmax(f1_scores))
+            best_threshold = float(thresholds[best_idx])
+            
+            if f1_scores[best_idx] <= 0:
                 best_threshold = float(scores.max())
-                method_suffix = f'roc_youden_j_{NO_POSITIVE_GAIN_SUFFIX}'
+                method_suffix = f'pr_max_f1_{NO_POSITIVE_GAIN_SUFFIX}'
             else:
-                best_threshold = float(finite_thresholds[best_index])
-                method_suffix = 'roc_youden_j'
+                method_suffix = 'pr_max_f1'
+        else:
+            best_threshold = float(scores.max())
+            method_suffix = f'pr_max_f1_{NO_POSITIVE_GAIN_SUFFIX}'
 
         return round(best_threshold, 4), f'{score_col}_{method_suffix}'
 
     unique_scores = np.sort(scores.unique())
-
     if len(unique_scores) == 1:
         return round(float(unique_scores[0]), 4), f'{score_col}_single_score'
 
