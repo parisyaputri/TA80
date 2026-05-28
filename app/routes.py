@@ -24,6 +24,10 @@ from app.services import (
     run_evaluations
 )
 
+from utils.eda import run_eda
+from configs.paths import EDA_DIR
+
+
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -88,6 +92,15 @@ def upload_csv():
         )
 
         file.save(filepath)
+
+        # ====================================
+        # RUN EDA
+        # ====================================
+        try:
+            print(f"\nRUNNING EDA ON {filepath.name}")
+            run_eda(filepath, EDA_DIR)
+        except Exception as eda_error:
+            print(f"Error running EDA: {str(eda_error)}")
 
         # ====================================
         # TRAIN + DETECT

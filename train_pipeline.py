@@ -8,6 +8,10 @@ from models.mv_arm import MVARMiner
 from models.intelligent_body import IntelligentBody
 from configs.model_config import IntelligentBodyConfig
 
+from models.lstm_baseline import LSTMBaseline
+from models.transformer_baseline import TransformerBaseline
+
+
 from utils.preprocessing import (
     detect_event_log_columns,
     preprocess_event_log
@@ -415,15 +419,32 @@ def train_and_detect(csv_path):
     if 'risk_level' not in final_df.columns:
         final_df['risk_level'] = 'Low'
 
-    # =====================================================
-    # BASELINES
-    # =====================================================
-
     final_df = add_lightweight_baselines(
         final_df,
         mv_arm,
         calibration_mask=calibration_mask
     )
+
+    # 1. LSTM Baseline
+    print("Training LSTM baseline...")
+    lstm = LSTMBaseline()
+    X_train_normal = final_df.loc[final_df['baseline_role'] == 'stable_baseline', numeric_cols]
+    if len(X_train_normal) == 0:
+        X_train_normal = final_df[numeric_cols]
+    lstm.fit(X_train_normal)
+    final_df['lstm_score'] = lstm.predict_score(final_df[numeric_cols])
+    lstm_preds = lstm.predict(final_df[numeric_cols])
+    final_df['lstm_predicted_label'] = ['deviant' if p == 1 else 'regular' for p in lstm_preds]
+
+    # 2. Transformer Baseline
+    if 'label' in final_df.columns:
+        print("Training Transformer baseline...")
+        transformer = TransformerBaseline()
+        transformer.fit(final_df[numeric_cols], final_df['label'])
+        final_df['transformer_score'] = transformer.predict_score(final_df[numeric_cols])
+        transformer_preds = transformer.predict(final_df[numeric_cols])
+        final_df['transformer_predicted_label'] = ['deviant' if p == 1 else 'regular' for p in transformer_preds]
+
 
     # =====================================================
     # EVALUATION
@@ -551,10 +572,27 @@ def train_and_detect(csv_path):
             }
         ]
 
+        if 'lstm_predicted_label' in evaluation_df.columns:
+            evaluations.append({
+                'title': f'BASELINE: LSTM AUTOENCODER ({current_evaluation_scope})',
+                'y_true': evaluation_df['label'],
+                'y_pred': evaluation_df['lstm_predicted_label'],
+                'y_scores': evaluation_df['lstm_score']
+            })
+
+        if 'transformer_predicted_label' in evaluation_df.columns:
+            evaluations.append({
+                'title': f'BASELINE: TRANSFORMER ({current_evaluation_scope})',
+                'y_true': evaluation_df['label'],
+                'y_pred': evaluation_df['transformer_predicted_label'],
+                'y_scores': evaluation_df['transformer_score']
+            })
+
         save_evaluation(
             evaluations,
             evaluation_path
         )
+
 
     # =====================================================
     # SAVE OUTPUTS

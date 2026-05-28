@@ -3,29 +3,29 @@
 
 
 ===== EVALUATION RESULTS =====
-Accuracy  : 0.9955
-Precision : 0.9569
+Accuracy  : 0.8805
+Precision : 0.4556
 Recall    : 1.0000
-F1-Score  : 0.9780
-FAR       : 0.0050
-MCC       : 0.9758
+F1-Score  : 0.6260
+FAR       : 0.1328
+MCC       : 0.6286
 AUC-ROC   : 0.9993
 AUC-PR    : 0.9933
 
 ===== CLASSIFICATION REPORT =====
               precision    recall  f1-score   support
 
-     deviant       0.96      1.00      0.98       200
-     regular       1.00      0.99      1.00      1800
+     deviant       0.46      1.00      0.63       200
+     regular       1.00      0.87      0.93      1800
 
-    accuracy                           1.00      2000
-   macro avg       0.98      1.00      0.99      2000
-weighted avg       1.00      1.00      1.00      2000
+    accuracy                           0.88      2000
+   macro avg       0.73      0.93      0.78      2000
+weighted avg       0.95      0.88      0.90      2000
 
 
 ===== CONFUSION MATRIX =====
                 Predicted Regular  Predicted Deviant
-Actual Regular               1791                  9
+Actual Regular               1561                239
 Actual Deviant                  0                200
 
 ===== STATISTICAL TESTING =====
@@ -91,4 +91,62 @@ weighted avg       0.01      0.10      0.02      2000
 ===== CONFUSION MATRIX =====
                 Predicted Regular  Predicted Deviant
 Actual Regular                  0               1800
+Actual Deviant                  0                200
+
+===== BASELINE: LSTM AUTOENCODER (FULL DATASET) =====
+
+
+===== EVALUATION RESULTS =====
+Accuracy  : 0.8060
+Precision : 0.2873
+Recall    : 0.6350
+F1-Score  : 0.3956
+FAR       : 0.1750
+MCC       : 0.3326
+AUC-ROC   : 0.7966
+AUC-PR    : 0.2607
+
+===== CLASSIFICATION REPORT =====
+              precision    recall  f1-score   support
+
+     deviant       0.29      0.64      0.40       200
+     regular       0.95      0.82      0.88      1800
+
+    accuracy                           0.81      2000
+   macro avg       0.62      0.73      0.64      2000
+weighted avg       0.89      0.81      0.84      2000
+
+
+===== CONFUSION MATRIX =====
+                Predicted Regular  Predicted Deviant
+Actual Regular               1485                315
+Actual Deviant                 73                127
+
+===== BASELINE: TRANSFORMER (FULL DATASET) =====
+
+
+===== EVALUATION RESULTS =====
+Accuracy  : 1.0000
+Precision : 1.0000
+Recall    : 1.0000
+F1-Score  : 1.0000
+FAR       : 0.0000
+MCC       : 1.0000
+AUC-ROC   : 1.0000
+AUC-PR    : 1.0000
+
+===== CLASSIFICATION REPORT =====
+              precision    recall  f1-score   support
+
+     deviant       1.00      1.00      1.00       200
+     regular       1.00      1.00      1.00      1800
+
+    accuracy                           1.00      2000
+   macro avg       1.00      1.00      1.00      2000
+weighted avg       1.00      1.00      1.00      2000
+
+
+===== CONFUSION MATRIX =====
+                Predicted Regular  Predicted Deviant
+Actual Regular               1800                  0
 Actual Deviant                  0                200

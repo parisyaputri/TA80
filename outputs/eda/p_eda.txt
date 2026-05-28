@@ -1,0 +1,57 @@
+==================================================
+EDA REPORT FOR: p.csv
+==================================================
+
+----- DATA OVERVIEW -----
+Total Rows (Events) : 497
+Total Columns       : 21
+Detected Columns:
+  - Case ID Column   : Case ID
+  - Activity Column  : Activity
+  - Timestamp Column : Complete Timestamp
+  - Resource Column  : Resource
+  - Label Column     : label
+
+----- CASE STATISTICS -----
+Total Unique Cases  : 139
+Events Per Case:
+  - Min             : 2
+  - Max             : 9
+  - Mean            : 3.58
+  - Median          : 4.00
+  - Std Dev         : 1.36
+
+----- CASE DURATION STATISTICS (DAYS) -----
+  - Min Duration    : 0.0000 days
+  - Max Duration    : 601.0000 days
+  - Mean Duration   : 164.9640 days
+  - Median Duration : 195.0000 days
+  - Std Dev Duration: 151.4155 days
+
+----- ACTIVITY STATISTICS -----
+Total Unique Activities: 9
+Top 10 Activities:
+  1. Create Fine                    : 139 (27.97%)
+  2. Send Fine                      : 90 (18.11%)
+  3. Insert Fine Notification       : 90 (18.11%)
+  4. Add penalty                    : 90 (18.11%)
+  5. Payment                        : 74 (14.89%)
+  6. Insert Date Appeal to Prefecture : 6 (1.21%)
+  7. Send Appeal to Prefecture      : 6 (1.21%)
+  8. Receive Result Appeal from Prefecture : 1 (0.20%)
+  9. Notify Result Appeal to Offender : 1 (0.20%)
+
+----- RESOURCE STATISTICS -----
+Total Unique Resources: 7
+Top 10 Resources:
+  1. 537.0                          : 105 (21.13%)
+  2. 557.0                          : 101 (20.32%)
+  3. 559.0                          : 96 (19.32%)
+  4. 541.0                          : 77 (15.49%)
+  5. 558.0                          : 77 (15.49%)
+  6. 550.0                          : 32 (6.44%)
+  7. 561.0                          : 9 (1.81%)
+
+----- LABEL DISTRIBUTION -----
+  - deviant         : 269 (54.12%)
+  - regular         : 228 (45.88%)

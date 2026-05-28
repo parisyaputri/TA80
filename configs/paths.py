@@ -6,3 +6,4 @@ OUTPUT_DIR = BASE_DIR / 'outputs'
 
 MODEL_DIR = OUTPUT_DIR / 'model'
 RESULT_DIR = OUTPUT_DIR / 'results'
+EDA_DIR = OUTPUT_DIR / 'eda'

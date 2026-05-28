@@ -81,15 +81,6 @@ def choose_iterative_baseline_threshold(
 ):
     if scored_df.empty:
         return 0.0, f'{score_col}_iterative_baseline_empty'
-
-    # If ground-truth labels are available, use Youden's J for mathematically optimal thresholding
-    if 'label' in scored_df.columns and scored_df['label'].nunique() == 2:
-        from utils.thresholding import choose_detection_threshold
-        try:
-            return choose_detection_threshold(scored_df, score_col)
-        except Exception:
-            pass
-
     stable_scores = scored_df.loc[
         scored_df[case_col].astype(str).isin(stable_case_ids),
         score_col

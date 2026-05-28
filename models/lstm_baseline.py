@@ -1,13 +1,13 @@
 # models/lstm_baseline.py
 
 import warnings
+import numpy as np
 from sklearn.ensemble import IsolationForest
 
 try:
     import torch
     import torch.nn as nn
     import torch.optim as optim
-    import numpy as np
     HAS_TORCH = True
 except ImportError:
     HAS_TORCH = False
@@ -127,3 +127,19 @@ class LSTMBaseline:
             errors = torch.mean((reconstructed - X_tensor) ** 2, dim=[1, 2]).cpu().numpy()
             
         return [1 if err > self.threshold else 0 for err in errors]
+
+    def predict_score(self, X):
+        X_arr = X.to_numpy() if hasattr(X, 'to_numpy') else np.array(X)
+        X_arr = X_arr.astype(np.float32)
+
+        if not self.has_torch:
+            # decision_function: lower means more anomalous. Invert to make higher mean more anomalous.
+            return -self.fallback_model.decision_function(X_arr)
+
+        # PyTorch: return reconstruction errors directly
+        self.net.eval()
+        X_tensor = torch.tensor(X_arr, dtype=torch.float32).unsqueeze(1).to(self.device)
+        with torch.no_grad():
+            reconstructed = self.net(X_tensor)
+            errors = torch.mean((reconstructed - X_tensor) ** 2, dim=[1, 2]).cpu().numpy()
+        return errors

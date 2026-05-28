@@ -20,6 +20,8 @@ from models.digital_twin import DigitalTwin
 from models.intelligent_body import IntelligentBody
 from models.mv_arm import MVARMiner
 from utils.baselines import add_lightweight_baselines
+from models.lstm_baseline import LSTMBaseline
+from models.transformer_baseline import TransformerBaseline
 from utils.feature_engineering import (
     build_case_features,
     learn_control_flow_profile,
@@ -347,10 +349,41 @@ def run_kfold(csv_path, n_splits=5, random_state=42, output_dir='outputs/kfold')
             calibration_mask=None,
         )
 
+        # Train and predict LSTM Baseline
+        stable_train_features = train_features[
+            train_features['case_id'].astype(str).isin(stable_case_ids)
+        ]
+        if len(stable_train_features) == 0:
+            stable_train_features = train_features
+            
+        lstm = LSTMBaseline()
+        lstm.fit(stable_train_features[NUMERIC_COLS])
+        test_scored['lstm_score'] = lstm.predict_score(test_scored[NUMERIC_COLS])
+        lstm_preds = lstm.predict(test_scored[NUMERIC_COLS])
+        test_scored['lstm_predicted_label'] = ['deviant' if p == 1 else 'regular' for p in lstm_preds]
+
+        # Train and predict Transformer Baseline
+        transformer = TransformerBaseline()
+        transformer.fit(train_features[NUMERIC_COLS], train_features['label'])
+        test_scored['transformer_score'] = transformer.predict_score(test_scored[NUMERIC_COLS])
+        transformer_preds = transformer.predict(test_scored[NUMERIC_COLS])
+        test_scored['transformer_predicted_label'] = ['deviant' if p == 1 else 'regular' for p in transformer_preds]
+
+        # Calculate baseline metrics
         metrics = _classification_metrics(
             test_scored['label'],
             test_scored['predicted_label'],
             test_scored['anomaly_score'],
+        )
+        lstm_metrics = _classification_metrics(
+            test_scored['label'],
+            test_scored['lstm_predicted_label'],
+            test_scored['lstm_score']
+        )
+        transformer_metrics = _classification_metrics(
+            test_scored['label'],
+            test_scored['transformer_predicted_label'],
+            test_scored['transformer_score']
         )
 
         row = {
@@ -365,8 +398,11 @@ def run_kfold(csv_path, n_splits=5, random_state=42, output_dir='outputs/kfold')
             'threshold': threshold,
             'threshold_method': threshold_method,
             **metrics,
+            **{f'lstm_{k}': v for k, v in lstm_metrics.items()},
+            **{f'transformer_{k}': v for k, v in transformer_metrics.items()}
         }
         rows.append(row)
+
 
         print(
             f"Fold {fold}: "
@@ -392,6 +428,14 @@ def run_kfold(csv_path, n_splits=5, random_state=42, output_dir='outputs/kfold')
         'mean_f1': results['f1'].mean(),
         'mean_auc_roc': results['auc_roc'].mean(),
         'mean_auc_pr': results['auc_pr'].mean(),
+        'mean_lstm_accuracy': results['lstm_accuracy'].mean(),
+        'mean_lstm_f1': results['lstm_f1'].mean(),
+        'mean_lstm_auc_roc': results['lstm_auc_roc'].mean(),
+        'mean_lstm_auc_pr': results['lstm_auc_pr'].mean(),
+        'mean_transformer_accuracy': results['transformer_accuracy'].mean(),
+        'mean_transformer_f1': results['transformer_f1'].mean(),
+        'mean_transformer_auc_roc': results['transformer_auc_roc'].mean(),
+        'mean_transformer_auc_pr': results['transformer_auc_pr'].mean(),
         'mean_stable_baseline_cases': results['stable_baseline_cases'].mean(),
     }])
 

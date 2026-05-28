@@ -1,13 +1,13 @@
 # models/transformer_baseline.py
 
 import warnings
+import numpy as np
 from sklearn.ensemble import RandomForestClassifier
 
 try:
     import torch
     import torch.nn as nn
     import torch.optim as optim
-    import numpy as np
     HAS_TORCH = True
 except ImportError:
     HAS_TORCH = False
@@ -134,3 +134,21 @@ class TransformerBaseline:
             preds = predicted.cpu().numpy()
             
         return preds
+
+    def predict_score(self, X):
+        X_arr = X.to_numpy() if hasattr(X, 'to_numpy') else np.array(X)
+        X_arr = X_arr.astype(np.float32)
+
+        if not self.has_torch:
+            # Return class 1 probability (deviant probability)
+            # RandomForest.predict_proba returns probabilities for both classes [prob_0, prob_1]
+            return self.fallback_model.predict_proba(X_arr)[:, 1]
+
+        # PyTorch Transformer probabilities
+        self.net.eval()
+        X_tensor = torch.tensor(X_arr, dtype=torch.float32).unsqueeze(1).to(self.device)
+        with torch.no_grad():
+            outputs = self.net(X_tensor)
+            probs = torch.softmax(outputs, dim=1)[:, 1].cpu().numpy()
+            
+        return probs
